@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Health Assessment</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f3f4f8;--surface:#fff;--surface2:#ebebf0;--border:#d8dae8;--border2:#aeb2cc;
+  --text:#12131e;--text2:#444660;--text3:#80849e;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Consolas','Courier New',monospace;
+  --radius:10px;--radius-sm:6px;
+  --mgr-color:#0369a1;--mgr-bg:#f0f9ff;--mgr-bdr:#7dd3fc;
+  --team-color:#7c3aed;--team-bg:#f5f3ff;--team-bdr:#c4b5fd;
+  --good:#16a34a;--good-bg:#f0fdf4;--good-bdr:#86efac;
+  --warn:#d97706;--warn-bg:#fffbeb;--warn-bdr:#fcd34d;
+  --bad:#dc2626;--bad-bg:#fef2f2;--bad-bdr:#fca5a5;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+
+/* ── SCORE BUTTONS ── */
+.b1{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+.b2{background:#FFF0E0;color:#7A3B00;border-color:#F5B96A;}
+.b3{background:#FEFCE0;color:#6B5A00;border-color:#E8D840;}
+.b4{background:#EDFAE0;color:#2E5E10;border-color:#A3D460;}
+.b5{background:#E0FAE8;color:#0A4E28;border-color:#3DC87A;}
+.b1.sel{background:#E24B4A;color:#fff;border-color:#A32D2D;box-shadow:0 0 0 3px #F0959550;}
+.b2.sel{background:#F5851A;color:#fff;border-color:#7A3B00;box-shadow:0 0 0 3px #F5B96A50;}
+.b3.sel{background:#D4C000;color:#3a3000;border-color:#6B5A00;box-shadow:0 0 0 3px #E8D84050;}
+.b4.sel{background:#6DB82A;color:#fff;border-color:#2E5E10;box-shadow:0 0 0 3px #A3D46050;}
+.b5.sel{background:#1AC866;color:#fff;border-color:#0A4E28;box-shadow:0 0 0 3px #3DC87A50;}
+
+/* ── SETUP SCREEN ── */
+#setup-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;}
+#setup-screen.hidden{display:none;}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:600px;width:100%;margin:auto;}
+.setup-card h2{font-size:18px;font-weight:600;margin-bottom:4px;}
+.setup-card>p{font-size:12px;color:var(--text3);margin-bottom:22px;}
+.setup-section{margin-bottom:18px;}
+.setup-section h3{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.mode-opts{display:flex;flex-direction:column;gap:9px;}
+.mode-opt{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
+.mode-opt:hover{background:var(--surface2);}
+.mode-opt.m-mgr.active{border-color:var(--mgr-color);background:var(--mgr-bg);}
+.mode-opt.m-team.active{border-color:var(--team-color);background:var(--team-bg);}
+.mode-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.mode-opt-title{font-size:13px;font-weight:600;}
+.mode-opt-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+.setup-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.setup-field label{font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:3px;}
+.setup-field input,.setup-field select{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);font-family:var(--font);}
+.setup-field.full{grid-column:1/-1;}
+.period-types{display:flex;gap:8px;}
+.pt-btn{flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:none;cursor:pointer;font-size:12px;font-weight:500;color:var(--text3);transition:all .15s;}
+.pt-btn.active{border-color:#0369a1;background:#f0f9ff;color:#0369a1;font-weight:600;}
+.start-btn{width:100%;padding:11px;font-size:13px;font-weight:600;border:none;border-radius:var(--radius-sm);color:#fff;cursor:pointer;margin-top:4px;}
+
+/* ── APP ── */
+#app{max-width:1000px;margin:0 auto;padding:24px 16px;}
+.session-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;margin-bottom:13px;border:1.5px solid;}
+.session-badge .dot{width:9px;height:9px;border-radius:50%;}
+.session-badge span{font-size:12px;font-weight:600;letter-spacing:.04em;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px;}
+.title-block h1{font-size:19px;font-weight:600;}
+.title-block p{font-size:12px;color:var(--text3);margin-top:2px;}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;}
+.btn{padding:7px 13px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:#12131e;color:#fff;border-color:#12131e;}
+.btn-primary:hover{background:#2a2c3e;}
+.btn-danger{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-bdr);}
+
+/* HEALTH BAR */
+.health-bar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:13px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.health-score-big{font-size:38px;font-weight:700;line-height:1;min-width:70px;}
+.health-score-stacked{flex-shrink:0;}
+.health-band{font-size:13px;font-weight:600;margin-top:2px;}
+.health-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.health-delta{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;margin-top:4px;}
+.delta-up{color:var(--good);}
+.delta-dn{color:var(--bad);}
+.delta-flat{color:var(--text3);}
+.health-track-wrap{flex:1;min-width:180px;}
+.health-dim-bars{display:flex;flex-direction:column;gap:5px;}
+.hdim-row{display:flex;align-items:center;gap:8px;}
+.hdim-lbl{font-size:11px;color:var(--text3);min-width:110px;flex-shrink:0;}
+.hdim-track{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.hdim-fill{height:100%;border-radius:3px;transition:width .4s;}
+.hdim-val{font-size:11px;font-weight:600;min-width:28px;text-align:right;}
+.flags-wrap{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto;}
+.flag-chip{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+
+/* PROGRESS */
+.progress-wrap{margin-bottom:12px;}
+.progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;transition:width .3s;}
+.progress-label{font-size:11px;color:var(--text3);margin-top:3px;}
+
+/* LEGEND */
+.legend{display:flex;gap:11px;margin-bottom:12px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.legend-dot{width:9px;height:9px;border-radius:50%;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.tab{padding:8px 15px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab.active{color:var(--text);font-weight:500;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* SECTION CARDS */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;gap:10px;}
+.section-header:hover{background:var(--surface2);}
+.section-left{display:flex;align-items:center;gap:9px;}
+.section-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--surface2);flex-shrink:0;}
+.section-name{font-size:13px;font-weight:600;}
+.section-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.section-right{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.sec-pill{font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text3);white-space:nowrap;min-width:90px;text-align:center;}
+.chevron{font-size:10px;color:var(--text3);transition:transform .2s;}.chevron.open{transform:rotate(90deg);}
+.section-body{border-top:1px solid var(--border);padding:4px 16px 14px;display:none;}.section-body.open{display:block;}
+
+/* METRIC ROWS — manager mode */
+.metric-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;padding:9px 0;border-top:1px solid var(--border);}
+.metric-label{font-size:13px;font-weight:500;}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;}
+.metric-input-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+/* numeric input metrics */
+.metric-number{display:flex;align-items:center;gap:6px;}
+.metric-number input{width:80px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-weight:600;text-align:center;background:var(--surface);color:var(--text);}
+.metric-number .metric-unit{font-size:11px;color:var(--text3);}
+/* score button metrics */
+.score-buttons{display:flex;gap:4px;}
+.score-btn{width:32px;height:32px;border-radius:var(--radius-sm);border:1.5px solid transparent;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:transform .1s;}
+.score-btn:active{transform:scale(.91);}
+.metric-sel-lbl{display:none;font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;}
+.metric-note-toggle{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;margin-top:3px;}
+.metric-note{width:100%;margin-top:5px;padding:5px 8px;font-size:11px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:none;min-height:38px;display:none;}
+.metric-note.vis{display:block;}
+
+/* MERGE PANEL */
+.merge-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px;}
+.merge-panel h3{font-size:14px;font-weight:600;margin-bottom:12px;}
+.merge-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.merge-slot{border:1.5px dashed var(--border2);border-radius:var(--radius-sm);padding:12px;display:flex;flex-direction:column;gap:6px;}
+.merge-slot.loaded-mgr{border-style:solid;border-color:var(--mgr-bdr);background:var(--mgr-bg);}
+.merge-slot.loaded-team{border-style:solid;border-color:var(--team-bdr);background:var(--team-bg);}
+.slot-lbl{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.slot-status{font-size:11px;color:var(--text3);}
+.slot-status.ok{color:var(--good);font-weight:500;}
+.merge-slot-btn{font-size:11px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);cursor:pointer;}
+.slot-clear{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;}
+input[type=file]{display:none;}
+.merge-btn{width:100%;padding:10px;font-size:13px;font-weight:600;background:#12131e;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:4px;}
+.merge-btn:hover{background:#2a2c3e;}
+.merge-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* SUMMARY */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+.sum-mc{background:var(--surface2);border-radius:var(--radius-sm);padding:11px 13px;}
+.sum-lbl{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.sum-val{font-size:22px;font-weight:600;}
+.sum-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.health-band-box{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius-sm);margin-bottom:14px;border:1.5px solid;}
+.band-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+.dim-bars-section h3{font-size:13px;font-weight:600;margin-bottom:9px;}
+.dbar-row{display:grid;grid-template-columns:190px 1fr 42px;gap:10px;align-items:center;margin-bottom:7px;}
+.dbar-lbl{font-size:12px;color:var(--text2);}
+.dbar-track{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:4px;transition:width .3s;}
+.dbar-sc{font-size:12px;font-weight:600;text-align:right;}
+.flags-section h3{font-size:13px;font-weight:600;margin-bottom:9px;}
+.flag-item{display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);font-size:13px;align-items:flex-start;}
+.flag-sev{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;letter-spacing:.03em;}
+.flag-red{background:var(--bad-bg);color:var(--bad);}
+.flag-amber{background:var(--warn-bg);color:var(--warn);}
+.flag-green{background:var(--good-bg);color:var(--good);}
+
+/* TREND / HISTORY */
+.trend-controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.trend-filter{padding:6px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);}
+.trend-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;overflow-x:auto;}
+.trend-chart-wrap h3{font-size:13px;font-weight:600;margin-bottom:12px;}
+.period-history{display:flex;flex-direction:column;gap:8px;}
+.period-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.period-row:hover{background:var(--surface2);}
+.period-label{font-size:12px;font-weight:600;min-width:120px;}
+.period-score{font-size:18px;font-weight:700;}
+.period-delta{font-size:12px;font-weight:600;min-width:44px;}
+.period-bar-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.period-bar-fill{height:100%;border-radius:4px;}
+.period-actions{display:flex;gap:6px;}
+.period-btn{font-size:10px;padding:3px 8px;border-radius:3px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--text3);}
+.period-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* COMPARE */
+.compare-controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.compare-controls select{padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);min-width:160px;}
+.compare-output{display:none;}.compare-output.visible{display:block;}
+.compare-table{width:100%;border-collapse:collapse;font-size:12px;}
+.compare-table th{padding:7px 10px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);text-align:left;}
+.compare-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.delta-cell{font-weight:600;}
+
+/* EXEC */
+.exec-hdr{text-align:center;padding:24px 0 18px;border-bottom:2px solid var(--border);margin-bottom:20px;}
+.exec-hdr h1{font-size:21px;font-weight:700;}.exec-hdr h2{font-size:13px;color:var(--text2);margin-top:3px;}
+.exec-meta{display:flex;gap:18px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.exec-meta span{font-size:12px;color:var(--text2);}
+.exec-scorecard{display:grid;grid-template-columns:1fr 1.5fr;gap:18px;margin-bottom:20px;}
+.exec-score-box{padding:20px;border-radius:var(--radius);border:2px solid;text-align:center;}
+.exec-big{font-size:50px;font-weight:700;line-height:1;}
+.exec-band{font-size:14px;font-weight:600;margin-top:5px;}
+.exec-dims{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;}
+.exec-dims h3{font-size:13px;font-weight:600;margin-bottom:10px;}
+.exec-flags{margin-bottom:20px;}
+.exec-flags h2{font-size:15px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:7px;margin-bottom:10px;}
+.efc{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;break-inside:avoid;}
+.etbl{width:100%;border-collapse:collapse;font-size:12px;}
+.etbl th{padding:5px 9px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);text-align:left;}
+.etbl td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:top;}
+
+/* JSON */
+.json-area{width:100%;height:220px;font-family:var(--mono);font-size:11px;padding:10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:vertical;}
+.json-actions{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.load-section{margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+.load-section h3{font-size:13px;font-weight:600;margin-bottom:7px;}
+.file-drop{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:16px;text-align:center;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:8px;}
+.file-drop:hover{background:var(--surface2);}
+
+/* CANVAS */
+canvas{max-width:100%;}
+
+@media print{
+  body{background:#fff;font-size:12px;}
+  #app{padding:0;max-width:100%;}
+  .topbar .toolbar,.tabs,.tab-panel:not(#tab-exec),#setup-screen{display:none!important;}
+  #tab-exec{display:block!important;}
+  .section-card{break-inside:avoid;}
+}
+@media(max-width:600px){
+  .exec-scorecard{grid-template-columns:1fr;}
+  .dbar-row{grid-template-columns:130px 1fr 34px;}
+  .merge-slots{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+<div class="setup-card">
+  <h2>Shift Health Assessment</h2>
+  <p>Configure session type, team structure, and period before beginning the assessment.</p>
+
+  <div class="setup-section">
+    <h3>Session type</h3>
+    <div class="mode-opts">
+      <div class="mode-opt m-mgr active" id="mo-mgr" onclick="selectSessionMode('mgr')">
+        <div class="mode-dot" style="background:var(--mgr-color)"></div>
+        <div><div class="mode-opt-title" style="color:var(--mgr-color)">Manager — operational data</div>
+          <div class="mode-opt-desc">Fill incident metrics, MTTR, SLA attainment, staffing, and change health. Objective data you own as manager.</div></div>
+      </div>
+      <div class="mode-opt m-team" id="mo-team" onclick="selectSessionMode('team')">
+        <div class="mode-dot" style="background:var(--team-color)"></div>
+        <div><div class="mode-opt-title" style="color:var(--team-color)">Team member — sentiment indicators</div>
+          <div class="mode-opt-desc">Rate workload, communication, tool quality, burnout risk, and psychological safety. Anonymous — manager sees the average.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <h3>Team structure</h3>
+    <div style="display:flex;gap:8px;">
+      <div class="pt-btn active" id="ts-noc" onclick="selectTeamType('noc')">NOC / 24×7 shift</div>
+      <div class="pt-btn" id="ts-eng" onclick="selectTeamType('eng')">Engineering / on-call</div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <h3>Period</h3>
+    <div class="period-types" id="period-type-btns">
+      <div class="pt-btn" id="pt-weekly" onclick="selectPeriodType('weekly')">Weekly</div>
+      <div class="pt-btn active" id="pt-monthly" onclick="selectPeriodType('monthly')">Monthly</div>
+      <div class="pt-btn" id="pt-quarterly" onclick="selectPeriodType('quarterly')">Quarterly</div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <div class="setup-fields">
+      <div class="setup-field"><label>Team / Shift name</label><input id="s-team" placeholder="e.g. NOC Day Shift"></div>
+      <div class="setup-field"><label>Period label</label><input id="s-period" placeholder="e.g. Week 23 / Jun 2025"></div>
+      <div class="setup-field"><label>Your name</label><input id="s-name" placeholder="Manager or team member name"></div>
+      <div class="setup-field"><label>Environment</label>
+        <select id="s-env">
+          <option value="">Select...</option>
+          <option>ISP / Carrier Network Ops</option>
+          <option>Enterprise IT / Campus Network</option>
+          <option>Managed Services Provider (MSP)</option>
+          <option>Telecom / Wireless Carrier (Cell, CBRS, Private LTE)</option>
+          <option>Data Center Operations</option>
+          <option>Cloud / Hybrid Infrastructure</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <button class="start-btn" id="start-btn" style="background:var(--mgr-color)" onclick="startSession()">Begin manager assessment</button>
+</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="session-badge-wrap"></div>
+  <div class="topbar">
+    <div class="title-block">
+      <h1 id="app-title">Shift Health Assessment</h1>
+      <p id="app-sub">Configure session to begin</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="toolbar">
+        <button class="btn" onclick="switchTab('exec')">📋 Report</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+        <button class="btn" onclick="exportSession()">↓ Export session</button>
+        <button class="btn btn-danger" onclick="resetAll()">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="health-bar-wrap" id="health-bar">
+    <div class="health-score-stacked">
+      <div class="health-score-big" id="h-score" style="color:#0369a1">—</div>
+      <div class="health-band" id="h-band">Not started</div>
+      <div class="health-delta" id="h-delta"></div>
+      <div class="health-meta" id="h-meta">0 of 0 scored</div>
+    </div>
+    <div class="health-track-wrap">
+      <div class="health-dim-bars" id="h-dim-bars"></div>
+    </div>
+    <div class="flags-wrap" id="h-flags"></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 of 0 indicators scored</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>1 — Critical</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>2 — Poor</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Acceptable</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>4 — Good</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>5 — Strong</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="assess">Assessment</button>
+    <button class="tab" data-tab="merge">Merge Sessions</button>
+    <button class="tab" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="trend">Trend & History</button>
+    <button class="tab" data-tab="compare">Compare Periods</button>
+    <button class="tab" data-tab="exec">Report</button>
+    <button class="tab" data-tab="io">Export / Import</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-assess"><div id="sections-container"></div></div>
+
+  <div class="tab-panel" id="tab-merge">
+    <div class="merge-panel">
+      <h3>Merge manager + team sessions into a complete period snapshot</h3>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:14px">Load the manager operational JSON and one or more team sentiment JSONs. The tool averages all team sentiment scores. Manager scores are used as-is.</p>
+      <div class="merge-slots">
+        <div class="merge-slot" id="mslot-mgr">
+          <div class="slot-lbl"><div class="mode-dot" style="background:var(--mgr-color);width:9px;height:9px;border-radius:50%"></div><span style="color:var(--mgr-color)">Manager session</span></div>
+          <div class="slot-status" id="mss-mgr">Not loaded</div>
+          <button class="merge-slot-btn" onclick="document.getElementById('mfi-mgr').click()">Load JSON</button>
+          <input type="file" id="mfi-mgr" accept=".json" onchange="loadMergeSlot('mgr',event)">
+          <span class="slot-clear" id="msc-mgr" style="display:none" onclick="clearMergeSlot('mgr')">Remove</span>
+        </div>
+        <div class="merge-slot" id="mslot-team">
+          <div class="slot-lbl"><div class="mode-dot" style="background:var(--team-color);width:9px;height:9px;border-radius:50%"></div><span style="color:var(--team-color)">Team sentiment sessions</span></div>
+          <div class="slot-status" id="mss-team">Not loaded</div>
+          <button class="merge-slot-btn" onclick="document.getElementById('mfi-team').click()">Load JSON file(s)</button>
+          <input type="file" id="mfi-team" accept=".json" multiple onchange="loadMergeSlotTeam(event)">
+          <span class="slot-clear" id="msc-team" style="display:none" onclick="clearMergeSlot('team')">Remove</span>
+        </div>
+      </div>
+      <button class="merge-btn" id="merge-btn" onclick="runMerge()" disabled>Merge and save period snapshot</button>
+      <div id="merge-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-summary">
+    <div class="sum-grid" id="sum-metrics"></div>
+    <div id="sum-band-box"></div>
+    <div class="dim-bars-section" style="margin-bottom:16px"><h3>Dimension breakdown</h3><div id="sum-dim-bars"></div></div>
+    <div class="flags-section"><h3>Flags & alerts</h3><div id="sum-flags-list"></div></div>
+  </div>
+
+  <div class="tab-panel" id="tab-trend">
+    <div class="trend-controls">
+      <select class="trend-filter" id="trend-filter" onchange="renderTrend()">
+        <option value="overall">Overall health score</option>
+        <option value="ops">Operational health</option>
+        <option value="sentiment">Team sentiment</option>
+        <option value="incidents">Incident volume</option>
+        <option value="mttr">MTTR (hrs)</option>
+        <option value="sla">SLA attainment %</option>
+        <option value="fatigue">Fatigue / burnout risk</option>
+      </select>
+      <button class="btn" onclick="clearHistory()">Clear all history</button>
+      <span style="font-size:11px;color:var(--text3)" id="history-count"></span>
+    </div>
+    <div class="trend-chart-wrap">
+      <h3 id="trend-chart-title">Overall health score — trend</h3>
+      <canvas id="trend-canvas" height="160"></canvas>
+    </div>
+    <div>
+      <h3 style="font-size:13px;font-weight:600;margin-bottom:10px">Period history</h3>
+      <div class="period-history" id="period-history"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-compare">
+    <div class="compare-controls">
+      <div><label style="font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:3px">Period A</label>
+        <select id="cmp-a" onchange="renderCompare()"></select></div>
+      <div style="padding-top:18px;color:var(--text3);font-size:18px">vs</div>
+      <div><label style="font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:3px">Period B</label>
+        <select id="cmp-b" onchange="renderCompare()"></select></div>
+    </div>
+    <div class="compare-output" id="compare-output"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-exec"><div id="exec-content"></div></div>
+
+  <div class="tab-panel" id="tab-io">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px">Export this session as JSON</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px">Export and share with the manager for merging. Manager and team member sessions are exported separately.</p>
+    <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+    <div class="json-actions">
+      <button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button>
+      <button class="btn" onclick="copyJSON()">Copy</button>
+      <button class="btn" onclick="downloadJSON()">↓ Download</button>
+    </div>
+    <div class="load-section">
+      <h3>Load a saved session</h3>
+      <div class="file-drop" onclick="document.getElementById('fi-load').click()">Click to load a saved session JSON
+        <input type="file" id="fi-load" accept=".json" onchange="loadMySession(event)"></div>
+      <div id="load-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+    </div>
+    <div class="load-section">
+      <h3>Import historical period snapshot</h3>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:8px">Load a previously saved merged period snapshot into trend history.</p>
+      <div class="file-drop" onclick="document.getElementById('fi-hist').click()">Click to import period snapshot
+        <input type="file" id="fi-hist" accept=".json" onchange="importSnapshot(event)"></div>
+      <div id="hist-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PALETTE ──
+const SC={solid:["","#E24B4A","#F5851A","#D4C000","#6DB82A","#1AC866"],bg:["","#FCEBEB","#FFF0E0","#FEFCE0","#EDFAE0","#E0FAE8"],bdr:["","#F09595","#F5B96A","#E8D840","#A3D460","#3DC87A"],txt:["","#791F1F","#7A3B00","#6B5A00","#2E5E10","#0A4E28"],lbl:["","Critical","Poor","Acceptable","Good","Strong"]};
+function bi(s){if(!s)return 0;if(s<1.5)return 1;if(s<2.5)return 2;if(s<3.5)return 3;if(s<4.2)return 4;return 5;}
+function scoreColor(s){return s>=4.2?'#16a34a':s>=3.5?'#6DB82A':s>=2.5?'#D4C000':s>=1.5?'#F5851A':'#E24B4A';}
+function bandLabel(s){if(!s)return'Not scored';if(s>=4.2)return'Healthy';if(s>=3.5)return'Good';if(s>=2.5)return'Needs attention';if(s>=1.5)return'At risk';return'Critical';}
+
+// ── SESSION STATE ──
+let sessionMode='mgr';   // 'mgr' | 'team'
+let teamType='noc';       // 'noc' | 'eng'
+let periodType='monthly'; // 'weekly' | 'monthly' | 'quarterly'
+let sessionMeta={team:'',period:'',name:'',env:''};
+const scores={};
+const metricValues={};  // for numeric inputs
+const notes={};
+
+// Merge state
+let mergeSlots={mgr:null,team:[]};
+
+// History (localStorage key: 'shiftHealth_history')
+function getHistory(){try{return JSON.parse(localStorage.getItem('shiftHealth_history')||'[]');}catch{return[];}}
+function saveHistory(h){try{localStorage.setItem('shiftHealth_history',JSON.stringify(h));}catch{}}
+
+// ── ASSESSMENT DEFINITION ──
+// Two pools: MGR sections and TEAM sections
+// MGR: scored metrics (1-5) + some numeric inputs stored in metricValues
+// TEAM: scored metrics (1-5) — anonymous sentiment
+
+const MGR_SECTIONS=[
+  {id:"incidents",name:"Incident Performance",icon:"🚨",sub:"Volume, severity, and resolution quality this period",
+   dim:"ops",
+   items:[
+    {id:"m_p1_vol",      type:"score",label:"P1/SEV1 incident volume",        sub:"Number of critical incidents relative to baseline",          map:{1:"Major spike (>3× baseline)",2:"Elevated (2× baseline)",3:"Near baseline",4:"Below baseline",5:"Significantly below baseline / zero"}},
+    {id:"m_p1_repeat",   type:"score",label:"Repeat incident rate",            sub:"% of incidents that are recurrences of a prior root cause",   map:{1:">40% repeat",2:"25–40%",3:"10–25%",4:"5–10%",5:"<5% — near-zero recurrence"}},
+    {id:"m_mttr",        type:"score",label:"MTTR vs. target",                 sub:"Mean time to restore vs. defined SLA targets by severity",    map:{1:"Consistently exceeds target",2:"Frequently misses target",3:"Meets target most of the time",4:"Meets target",5:"Significantly beats target"}},
+    {id:"m_detection",   type:"score",label:"Detection speed",                 sub:"Time from incident start to first alert / ticket created",    map:{1:"Proactive detection rare",2:"Often reactive detection",3:"Mix of proactive and reactive",4:"Mostly proactive",5:"Near-100% proactive detection"}},
+  ]},
+  {id:"escalation",name:"Escalation & Handoff Quality",icon:"📡",sub:"Escalation accuracy, context quality, and tier handoffs",
+   dim:"ops",
+   items:[
+    {id:"m_esc_acc",     type:"score",label:"Escalation accuracy rate",        sub:"% of escalations that were correctly scoped (not premature or late)",map:{1:"Frequent inappropriate escalations",2:"Often incorrect",3:"Mostly correct",4:"Accurate",5:"Near-perfect; L1→L2→L3 chain clean"}},
+    {id:"m_handoff",     type:"score",label:"Shift handoff quality",           sub:"Open incidents documented and context transferred at handoff",   map:{1:"Handoffs regularly fail",2:"Inconsistent quality",3:"Adequate",4:"Structured and reliable",5:"Zero dropped incidents; tool-supported"}},
+    {id:"m_bridge",      type:"score",label:"Incident bridge effectiveness",   sub:"Quality of stakeholder communication during P1/P2 bridges",     map:{1:"Bridges poorly managed",2:"Inconsistent",3:"Functional",4:"Well-managed",5:"Exemplary; proactive stakeholder updates"}},
+  ]},
+  {id:"change",name:"Change & Configuration Health",icon:"🔄",sub:"Change success rate, rollbacks, and change-induced incidents",
+   dim:"ops",
+   items:[
+    {id:"m_chg_success", type:"score",label:"Change success rate",             sub:"% of changes completed without unplanned rollback or incident",  map:{1:"<70% success",2:"70–85%",3:"85–95%",4:"95–99%",5:"99%+ — near-perfect execution"}},
+    {id:"m_chg_induced", type:"score",label:"Change-induced incident rate",    sub:"Incidents caused by planned changes this period",                map:{1:">15% of changes cause incidents",2:"8–15%",3:"3–8%",4:"1–3%",5:"<1% — effectively zero"}},
+    {id:"m_rollbacks",   type:"score",label:"Rollback success rate",           sub:"% of rollbacks completed cleanly within the maintenance window", map:{1:"Rollbacks frequently fail",2:"Often problematic",3:"Usually successful",4:"Consistently successful",5:"100% clean rollbacks; practiced"}},
+  ]},
+  {id:"sla",name:"SLA & Service Attainment",icon:"📊",sub:"SLA attainment, ticket backlog, and response time compliance",
+   dim:"ops",
+   items:[
+    {id:"m_sla_p1",      type:"score",label:"P1 SLA attainment",               sub:"% of P1 incidents resolved within contracted SLA",               map:{1:"<80%",2:"80–90%",3:"90–95%",4:"95–99%",5:"100% — perfect P1 SLA compliance"}},
+    {id:"m_sla_p2",      type:"score",label:"P2/P3 SLA attainment",            sub:"% of P2 and P3 incidents resolved within SLA",                  map:{1:"<70%",2:"70–85%",3:"85–95%",4:"95–99%",5:"100%"}},
+    {id:"m_backlog",     type:"score",label:"Ticket backlog health",            sub:"Age and volume of open/stale tickets in the queue",              map:{1:"Significant aged backlog",2:"Notable backlog",3:"Manageable backlog",4:"Backlog under control",5:"Queue clean; no aged tickets"}},
+    {id:"m_ack_time",    type:"score",label:"Alert acknowledgment compliance",  sub:"% of alerts acknowledged within defined SLA window",            map:{1:"<70% acknowledged in time",2:"70–85%",3:"85–95%",4:"95–99%",5:"100%"}},
+  ]},
+  {id:"staffing",name:"Staffing & Coverage",icon:"👥",sub:"Headcount, on-call burden, and coverage gaps",
+   dim:"ops",
+   items:[
+    {id:"m_coverage",    type:"score",label:"Shift coverage completeness",     sub:"All shifts fully staffed with no unplanned coverage gaps",       map:{1:"Multiple uncovered shifts",2:"Frequent gaps",3:"Minor gaps",4:"Fully covered with minor exceptions",5:"100% coverage; no gaps"}},
+    {id:"m_oncall",      type:"score",label:"On-call burden distribution",     sub:"On-call load distributed equitably; no individual overloaded",   map:{1:"Severe on-call imbalance",2:"Noticeable imbalance",3:"Mostly balanced",4:"Balanced",5:"Equitable; rotation working well"}},
+    {id:"m_overtime",    type:"score",label:"Overtime / unplanned hours",      sub:"Amount of unplanned overtime this period",                       map:{1:"Excessive overtime (>20% of hours)",2:"Notable overtime",3:"Some overtime",4:"Minimal overtime",5:"No unplanned overtime"}},
+  ]},
+  {id:"noc_shift",name:"NOC Shift Operations",icon:"🖥️",sub:"Shift-specific health indicators (NOC / 24×7 teams)",
+   dim:"ops",nocOnly:true,
+   items:[
+    {id:"m_overnight",   type:"score",label:"Overnight incident density",      sub:"Volume and severity of incidents during overnight shifts",        map:{1:"Disproportionately high overnight load",2:"Elevated",3:"Normal",4:"Below average",5:"Quiet; well-managed overnight"}},
+    {id:"m_shift_fatigue",type:"score",label:"Shift fatigue indicators observed",sub:"Observable signs of fatigue affecting performance (manager view)",map:{1:"Clear fatigue impact on performance",2:"Noticeable signs",3:"Some indicators",4:"Minor indicators",5:"No fatigue impact observed"}},
+    {id:"m_handover_drill",type:"score",label:"Handover drill / readiness",     sub:"Shift handover meetings happening; checklist completed each shift",map:{1:"Handover process not followed",2:"Inconsistent",3:"Usually followed",4:"Consistently followed",5:"Exemplary; zero missed handovers"}},
+  ]},
+  {id:"eng_ops",name:"Engineering / On-call Operations",icon:"⚙️",sub:"Engineering team health indicators (non-24×7 teams)",
+   dim:"ops",engOnly:true,
+   items:[
+    {id:"m_oncall_pages",type:"score",label:"After-hours page volume",         sub:"Volume of after-hours pages/alerts requiring response",          map:{1:"Excessive pages disrupting rest",2:"High page volume",3:"Moderate",4:"Low and manageable",5:"Minimal; noise effectively suppressed"}},
+    {id:"m_sprint",      type:"score",label:"Project / sprint delivery health", sub:"Planned work being completed despite incident load",             map:{1:"Project work blocked by incidents",2:"Significantly impacted",3:"Moderate impact",4:"Minor impact",5:"Projects on track; incidents managed separately"}},
+    {id:"m_tech_debt",   type:"score",label:"Technical debt / toil reduction",  sub:"Is the team reducing toil and improving automation this period?",map:{1:"Toil increasing",2:"Flat, no improvement",3:"Minor improvements",4:"Noticeable reduction",5:"Significant automation wins this period"}},
+  ]},
+  {id:"knowledge",name:"Knowledge & Process Health",icon:"📚",sub:"Runbook usage, postmortem completion, and knowledge gaps",
+   dim:"ops",
+   items:[
+    {id:"m_postmortem",  type:"score",label:"Postmortem completion rate",      sub:"% of SEV1/SEV2 incidents with completed postmortem this period",  map:{1:"<30% completed",2:"30–60%",3:"60–80%",4:"80–95%",5:"100% — all postmortems completed on time"}},
+    {id:"m_runbook",     type:"score",label:"Runbook adherence",               sub:"Operators following runbooks; no improvised responses to known issues",map:{1:"Runbooks frequently bypassed",2:"Inconsistent use",3:"Mostly followed",4:"Consistently followed",5:"Followed; gaps reported and fixed"}},
+    {id:"m_known_gaps",  type:"score",label:"Knowledge gap risk",              sub:"Team knowledge gaps creating single-point-of-failure risk",      map:{1:"Critical knowledge gaps; risk events occurred",2:"Significant gaps",3:"Moderate gaps; managed",4:"Minor gaps",5:"No critical knowledge gaps identified"}},
+  ]},
+];
+
+const TEAM_SECTIONS=[
+  {id:"workload",name:"Workload & Pace",icon:"⚖️",sub:"How manageable is the workload this period? (anonymous)",
+   dim:"sentiment",
+   items:[
+    {id:"t_workload",    type:"score",label:"Overall workload manageability",  sub:"Is the volume of work sustainable and manageable?",              map:{1:"Completely overwhelming",2:"Consistently too high",3:"Manageable with effort",4:"Generally manageable",5:"Comfortable and sustainable"}},
+    {id:"t_interrupts",  type:"score",label:"Interruption frequency",          sub:"Frequency of context-switching between incidents and other work", map:{1:"Constant interruptions; impossible to focus",2:"Very frequent",3:"Moderate interruptions",4:"Occasional",5:"Rare; focused work time available"}},
+    {id:"t_pace",        type:"score",label:"Pace sustainability",             sub:"Is the current pace sustainable for the next period too?",       map:{1:"Not sustainable; something will break",2:"Unlikely sustainable",3:"Uncertain",4:"Probably sustainable",5:"Definitely sustainable"}},
+  ]},
+  {id:"wellbeing",name:"Wellbeing & Burnout Risk",icon:"🧠",sub:"Burnout indicators and recovery time (anonymous)",
+   dim:"sentiment",
+   items:[
+    {id:"t_burnout",     type:"score",label:"Personal burnout risk",           sub:"How are you feeling relative to burnout?",                      map:{1:"Burning out now",2:"Feeling early burnout signs",3:"Tired but managing",4:"Recovering well",5:"Energized and motivated"}},
+    {id:"t_rest",        type:"score",label:"Adequate rest between shifts",    sub:"Getting enough recovery time between shifts / on-call rotations",map:{1:"Severely insufficient rest",2:"Often not enough",3:"Sometimes insufficient",4:"Usually adequate",5:"Consistently well-rested"}},
+    {id:"t_oncall_fair", type:"score",label:"On-call fairness",                sub:"On-call rotation feels fair and not overloading any individual", map:{1:"Very unfair distribution",2:"Often unfair",3:"Generally fair with issues",4:"Mostly fair",5:"Fair and equitable"}},
+  ]},
+  {id:"comms",name:"Communication & Team Dynamics",icon:"💬",sub:"Team communication quality and psychological safety (anonymous)",
+   dim:"sentiment",
+   items:[
+    {id:"t_psych_safe",  type:"score",label:"Psychological safety",            sub:"Comfortable raising issues, errors, and concerns without fear",  map:{1:"Afraid to speak up",2:"Often uncomfortable",3:"Sometimes comfortable",4:"Usually comfortable",5:"Fully safe; open and blameless"}},
+    {id:"t_mgr_comms",   type:"score",label:"Manager communication quality",   sub:"Manager communicates clearly, listens, and acts on feedback",    map:{1:"Poor; unclear or unresponsive",2:"Below expectations",3:"Adequate",4:"Good",5:"Excellent; transparent and responsive"}},
+    {id:"t_team_cohesion",type:"score",label:"Team cohesion",                  sub:"Team works well together; covers each other; supports new members",map:{1:"Siloed; lack of collaboration",2:"Some friction",3:"Functional team",4:"Cohesive team",5:"Strong trust and mutual support"}},
+  ]},
+  {id:"tools",name:"Tools & Process Quality",icon:"🔧",sub:"Are the tools and processes helping or hindering? (anonymous)",
+   dim:"sentiment",
+   items:[
+    {id:"t_tools",       type:"score",label:"Tool effectiveness",              sub:"The monitoring, ticketing, and ops tools help you do your job",   map:{1:"Tools actively hinder work",2:"Frequently inadequate",3:"Adequate with workarounds",4:"Good; mostly work well",5:"Excellent; tools enable efficient work"}},
+    {id:"t_runbooks_useful",type:"score",label:"Runbook / procedure usefulness",sub:"Runbooks and SOPs are current, accurate, and actually helpful",  map:{1:"Runbooks useless or missing",2:"Often out of date",3:"Partially helpful",4:"Mostly useful",5:"Excellent; always current and actionable"}},
+    {id:"t_training",    type:"score",label:"Training & development access",   sub:"Access to training, learning time, and skill development",       map:{1:"No training access",2:"Rare opportunities",3:"Occasional access",4:"Regular opportunities",5:"Strong development culture; training embedded"}},
+  ]},
+  {id:"clarity",name:"Role Clarity & Direction",icon:"🎯",sub:"Clarity on priorities and direction (anonymous)",
+   dim:"sentiment",
+   items:[
+    {id:"t_priorities",  type:"score",label:"Priority clarity",                sub:"You know what matters most this period; no conflicting priorities",map:{1:"Completely unclear priorities",2:"Often confused",3:"Usually clear",4:"Clear priorities",5:"Fully aligned; no ambiguity"}},
+    {id:"t_feedback",    type:"score",label:"Feedback quality received",       sub:"The feedback you receive is timely, specific, and actionable",    map:{1:"No meaningful feedback",2:"Rarely useful",3:"Sometimes useful",4:"Usually helpful",5:"Excellent; frequent, specific, actionable"}},
+  ]},
+];
+
+function getActiveSections(){
+  const mgr=MGR_SECTIONS.filter(s=>{
+    if(s.nocOnly&&teamType!=='noc')return false;
+    if(s.engOnly&&teamType!=='eng')return false;
+    return true;
+  });
+  return sessionMode==='mgr'?mgr:TEAM_SECTIONS;
+}
+
+function getAllItems(){return getActiveSections().flatMap(s=>s.items);}
+function countScored(){return getAllItems().filter(i=>scores[i.id]>0).length;}
+function calcDimAvg(dim){
+  const items=getActiveSections().filter(s=>s.dim===dim).flatMap(s=>s.items);
+  const v=items.map(i=>scores[i.id]).filter(x=>x>0);
+  return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+}
+function calcOverall(){
+  const v=getAllItems().map(i=>scores[i.id]).filter(x=>x>0);
+  return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+}
+
+// ── SETUP ──
+function selectSessionMode(m){
+  sessionMode=m;
+  document.querySelectorAll('.mode-opt').forEach(el=>el.classList.toggle('active',el.id===`mo-${m}`));
+  document.getElementById('start-btn').style.background=m==='mgr'?'var(--mgr-color)':'var(--team-color)';
+  document.getElementById('start-btn').textContent=m==='mgr'?'Begin manager assessment':'Begin team sentiment assessment';
+}
+function selectTeamType(t){
+  teamType=t;
+  document.querySelectorAll('[id^="ts-"]').forEach(el=>el.classList.toggle('active',el.id===`ts-${t}`));
+}
+function selectPeriodType(p){
+  periodType=p;
+  document.querySelectorAll('[id^="pt-"]').forEach(el=>el.classList.toggle('active',el.id===`pt-${p}`));
+}
+
+function startSession(){
+  const team=document.getElementById('s-team').value.trim();
+  if(!team){alert('Enter a team / shift name.');return;}
+  sessionMeta={team,period:document.getElementById('s-period').value,name:document.getElementById('s-name').value,env:document.getElementById('s-env').value};
+  getAllItems().forEach(i=>{scores[i.id]=0;notes[i.id]='';});
+  document.getElementById('setup-screen').classList.add('hidden');
+  applySessionUI();
+  renderSections();
+  updateHealthBar();
+}
+
+function applySessionUI(){
+  const isMgr=sessionMode==='mgr';
+  const color=isMgr?'var(--mgr-color)':'var(--team-color)';
+  const bg=isMgr?'var(--mgr-bg)':'var(--team-bg)';
+  const bdr=isMgr?'var(--mgr-bdr)':'var(--team-bdr)';
+  const label=isMgr?'MANAGER — OPERATIONAL DATA':`TEAM SENTIMENT — ${sessionMeta.name?sessionMeta.name.toUpperCase():'ANONYMOUS'}`;
+  document.getElementById('session-badge-wrap').innerHTML=`<div class="session-badge" style="background:${bg};border-color:${bdr}"><div class="dot" style="background:${isMgr?'var(--mgr-color)':'var(--team-color)'}"></div><span style="color:${isMgr?'var(--mgr-color)':'var(--team-color)'}">${label}</span></div>`;
+  document.getElementById('app-title').textContent=`${sessionMeta.team}${sessionMeta.period?' — '+sessionMeta.period:''}`;
+  const typeLabels={weekly:'Weekly',monthly:'Monthly',quarterly:'Quarterly'};
+  const teamLabels={noc:'NOC / 24×7',eng:'Engineering / On-call'};
+  document.getElementById('app-sub').textContent=`${typeLabels[periodType]} ${isMgr?'operational':'sentiment'} assessment · ${teamLabels[teamType]}${sessionMeta.env?' · '+sessionMeta.env:''}`;
+  document.getElementById('prog-fill').style.background=isMgr?'var(--mgr-color)':'var(--team-color)';
+  // tab accent
+  document.querySelectorAll('.tab').forEach(t=>{if(t.classList.contains('active'))t.style.borderBottomColor=isMgr?'var(--mgr-color)':'var(--team-color)';});
+}
+
+// ── RENDER SECTIONS ──
+function renderSections(){
+  const container=document.getElementById('sections-container');container.innerHTML='';
+  getActiveSections().forEach(sec=>{
+    const items=sec.items;
+    const itemsHtml=items.map(item=>`
+      <div class="metric-row">
+        <div>
+          <div class="metric-label">${item.label}</div>
+          <div class="metric-sub">${item.sub}</div>
+          <span class="metric-sel-lbl" id="lbl-${item.id}"></span>
+          <div class="metric-note-toggle" onclick="toggleNote('${item.id}')">+ add note</div>
+          <textarea class="metric-note" id="note-${item.id}" placeholder="Context, observations..." rows="2" onchange="notes['${item.id}']=this.value"></textarea>
+        </div>
+        <div class="metric-input-wrap">
+          <div class="score-buttons">${[1,2,3,4,5].map(v=>`<button class="score-btn b${v}" data-id="${item.id}" data-val="${v}" onclick="setScore('${item.id}',${v})">${v}</button>`).join('')}</div>
+        </div>
+      </div>`).join('');
+    const div=document.createElement('div');div.className='section-card';
+    div.innerHTML=`<div class="section-header" onclick="toggleSec('${sec.id}')">
+      <div class="section-left"><div class="section-icon">${sec.icon}</div>
+        <div><div class="section-name">${sec.name}</div><div class="section-sub">${sec.sub}</div></div></div>
+      <div class="section-right">
+        <div class="sec-pill" id="spill-${sec.id}">Not scored</div>
+        <div class="chevron" id="schev-${sec.id}">&#9654;</div></div></div>
+      <div class="section-body" id="sbody-${sec.id}">${itemsHtml}</div>`;
+    container.appendChild(div);
+    updateSecPill(sec);
+  });
+  toggleSec(getActiveSections()[0]?.id);
+}
+
+function toggleSec(id){const b=document.getElementById(`sbody-${id}`),ch=document.getElementById(`schev-${id}`);if(!b)return;const o=b.classList.toggle('open');ch.classList.toggle('open',o);}
+function toggleNote(id){const n=document.getElementById(`note-${id}`);n.classList.toggle('vis');if(n.classList.contains('vis'))n.focus();}
+
+function setScore(id,val){
+  scores[id]=val;
+  document.querySelectorAll(`[data-id="${id}"]`).forEach(btn=>{const bv=parseInt(btn.dataset.val);btn.className=`score-btn b${bv}`+(bv===val?' sel':'');});
+  const lbl=document.getElementById(`lbl-${id}`);
+  if(lbl){
+    const sec=getActiveSections().find(s=>s.items.find(i=>i.id===id));
+    const item=sec&&sec.items.find(i=>i.id===id);
+    if(val>0&&item){lbl.textContent=item.map[val];lbl.style.cssText=`display:inline-block;background:${SC.bg[val]};color:${SC.txt[val]};`;}else lbl.style.display='none';
+  }
+  updateSecPill(getActiveSections().find(s=>s.items.find(i=>i.id===id)));
+  updateHealthBar();
+}
+
+function updateSecPill(sec){
+  if(!sec)return;
+  const avg=sec.items.map(i=>scores[i.id]).filter(x=>x>0);
+  const a=avg.length?avg.reduce((a,b)=>a+b,0)/avg.length:0;
+  const sc=sec.items.filter(i=>scores[i.id]>0).length,tot=sec.items.length;
+  const pill=document.getElementById(`spill-${sec.id}`);if(!pill)return;
+  if(a>0){const b=bi(a);pill.style.cssText=`background:${SC.bg[b]};color:${SC.txt[b]};border-color:${SC.bdr[b]};`;pill.textContent=`${a.toFixed(1)} (${sc}/${tot})`;}
+  else{pill.style.cssText='';pill.textContent=`0/${tot} scored`;}
+}
+
+function updateHealthBar(){
+  const o=calcOverall();const tot=getAllItems().length,sc=countScored();
+  const color=o>0?scoreColor(o):'#0369a1';
+  document.getElementById('h-score').textContent=o>0?o.toFixed(2):'—';
+  document.getElementById('h-score').style.color=color;
+  document.getElementById('h-band').textContent=o>0?bandLabel(o):'Not started';
+  document.getElementById('h-band').style.color=color;
+  document.getElementById('h-meta').textContent=`${sc} of ${tot} scored`;
+  document.getElementById('prog-fill').style.width=Math.round(sc/tot*100)+'%';
+  document.getElementById('prog-label').textContent=`${sc} of ${tot} indicators scored`;
+  // dim bars
+  const dims=[...new Set(getActiveSections().map(s=>s.dim))];
+  document.getElementById('h-dim-bars').innerHTML=dims.map(d=>{
+    const a=calcDimAvg(d);const c=a>0?scoreColor(a):'#b0b4c4';
+    const lbl=d==='ops'?'Operational':'Sentiment';
+    return`<div class="hdim-row"><span class="hdim-lbl">${lbl}</span><div class="hdim-track"><div class="hdim-fill" style="width:${a?a/5*100:0}%;background:${c}"></div></div><span class="hdim-val" style="color:${c}">${a?a.toFixed(1):'—'}</span></div>`;
+  }).join('');
+  // flags
+  const flags=[];
+  getAllItems().forEach(i=>{if(scores[i.id]===1||scores[i.id]===2){const sec=getActiveSections().find(s=>s.items.find(x=>x.id===i.id));flags.push({label:i.label,sev:scores[i.id]===1?'red':'amber',sec:sec?.name||''});}});
+  document.getElementById('h-flags').innerHTML=flags.slice(0,4).map(f=>`<div class="flag-chip" style="background:${f.sev==='red'?'#fef2f2':'#fffbeb'};color:${f.sev==='red'?'#dc2626':'#d97706'};border:1px solid ${f.sev==='red'?'#fca5a5':'#fcd34d'}">${f.label}</div>`).join('');
+}
+
+// ── MERGE ──
+let mergeData={mgr:null,team:[]};
+function loadMergeSlot(type,evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d.tool!=='shift-health'||(d.sessionMode!==type&&!(type==='mgr'&&d.sessionMode==='mgr'))){alert(`Expected a ${type} session.`);return;}
+    mergeData[type]=d;
+    document.getElementById(`mslot-${type}`).className=`merge-slot loaded-${type}`;
+    document.getElementById(`mss-${type}`).className='slot-status ok';
+    document.getElementById(`mss-${type}`).textContent=`✓ ${d.meta?.team||''} — ${d.meta?.period||''} (${Math.round(d.completion*100)}% complete)`;
+    document.getElementById(`msc-${type}`).style.display='inline';
+    checkMergeReady();
+  }catch(err){alert('Error: '+err.message);}};r.readAsText(file);
+}
+function loadMergeSlotTeam(evt){
+  const files=Array.from(evt.target.files);
+  mergeData.team=[];
+  files.forEach(file=>{
+    const r=new FileReader();r.onload=e=>{try{
+      const d=JSON.parse(e.target.result);
+      if(d.tool!=='shift-health'||d.sessionMode!=='team')return;
+      mergeData.team.push(d);
+      document.getElementById('mslot-team').className='merge-slot loaded-team';
+      document.getElementById('mss-team').className='slot-status ok';
+      document.getElementById('mss-team').textContent=`✓ ${mergeData.team.length} team session(s) loaded`;
+      document.getElementById('msc-team').style.display='inline';
+      checkMergeReady();
+    }catch{}};r.readAsText(file);
+  });
+}
+function clearMergeSlot(type){mergeData[type]=type==='team'?[]:null;document.getElementById(`mslot-${type}`).className='merge-slot';document.getElementById(`mss-${type}`).className='slot-status';document.getElementById(`mss-${type}`).textContent='Not loaded';document.getElementById(`msc-${type}`).style.display='none';checkMergeReady();}
+function checkMergeReady(){document.getElementById('merge-btn').disabled=!mergeData.mgr&&mergeData.team.length===0;}
+
+function runMerge(){
+  const mgrData=mergeData.mgr;
+  const teamSessions=mergeData.team;
+  if(!mgrData&&teamSessions.length===0){alert('Load at least one session.');return;}
+  // Build merged scores
+  const merged={};
+  // apply mgr scores
+  if(mgrData)Object.entries(mgrData.scores||{}).forEach(([k,v])=>{merged[k]=v;});
+  // average team scores per item
+  if(teamSessions.length>0){
+    const teamKeys=new Set(teamSessions.flatMap(d=>Object.keys(d.scores||{})));
+    teamKeys.forEach(k=>{
+      const vals=teamSessions.map(d=>d.scores?.[k]||0).filter(x=>x>0);
+      if(vals.length)merged[k]=parseFloat((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2));
+    });
+  }
+  // compute overall and dims
+  const allVals=Object.values(merged).filter(x=>x>0);
+  const overall=allVals.length?allVals.reduce((a,b)=>a+b,0)/allVals.length:0;
+  const refMeta=(mgrData||teamSessions[0])?.meta||{};
+  const snapshot={
+    schema_version:"1.0",tool:"shift-health-snapshot",
+    meta:{...refMeta,teamType,periodType,teamSessions:teamSessions.length,hasMgr:!!mgrData},
+    period_key:`${refMeta.team||'team'}_${refMeta.period||new Date().toISOString().slice(0,10)}`,
+    date:new Date().toISOString(),
+    overall_score:parseFloat(overall.toFixed(3)),
+    health_band:bandLabel(overall),
+    scores:merged,
+    notes:mgrData?.notes||{},
+  };
+  // save to history
+  const history=getHistory();
+  const existing=history.findIndex(h=>h.period_key===snapshot.period_key);
+  if(existing>=0){history[existing]=snapshot;}else{history.unshift(snapshot);}
+  if(history.length>52)history.splice(52);
+  saveHistory(history);
+  document.getElementById('merge-status').style.color='#16a34a';
+  document.getElementById('merge-status').textContent=`✓ Period "${refMeta.period||'snapshot'}" saved to history. Switch to Trend & History tab to view.`;
+  // also offer download
+  const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`shift-health-${(refMeta.team||'team').replace(/\s+/g,'-').toLowerCase()}-${(refMeta.period||new Date().toISOString().slice(0,10)).replace(/\s+/g,'-')}.json`;
+  a.click();
+  renderTrend();updateCompareLists();
+}
+
+// ── SUMMARY ──
+function renderSummary(){
+  const o=calcOverall();const sc=countScored(),tot=getAllItems().length;
+  const opsA=calcDimAvg('ops'),sentA=calcDimAvg('sentiment');
+  const color=o>0?scoreColor(o):'var(--text3)';
+  document.getElementById('sum-metrics').innerHTML=`
+    <div class="sum-mc"><div class="sum-lbl">Overall health</div><div class="sum-val" style="color:${color}">${o?o.toFixed(2):'—'}</div><div class="sum-sub">${o?bandLabel(o):'Not scored'}</div></div>
+    ${opsA>0?`<div class="sum-mc"><div class="sum-lbl">Operational</div><div class="sum-val" style="color:${scoreColor(opsA)}">${opsA.toFixed(2)}</div><div class="sum-sub">${bandLabel(opsA)}</div></div>`:''}
+    ${sentA>0?`<div class="sum-mc"><div class="sum-lbl">Sentiment</div><div class="sum-val" style="color:${scoreColor(sentA)}">${sentA.toFixed(2)}</div><div class="sum-sub">${bandLabel(sentA)}</div></div>`:''}
+    <div class="sum-mc"><div class="sum-lbl">Completion</div><div class="sum-val">${Math.round(sc/tot*100)}%</div><div class="sum-sub">${sc}/${tot} indicators</div></div>`;
+  const bandBox=document.getElementById('sum-band-box');
+  if(o){const c=scoreColor(o);bandBox.innerHTML=`<div class="health-band-box" style="background:${o>=4.2?'#f0fdf4':o>=3.5?'#f0fdf4':o>=2.5?'#fffbeb':'#fef2f2'};border-color:${o>=4.2?'#86efac':o>=3.5?'#86efac':o>=2.5?'#fcd34d':'#fca5a5'}"><div class="band-dot" style="background:${c}"></div><div><div style="font-size:14px;font-weight:600;color:${c}">${bandLabel(o)}</div><div style="font-size:12px;color:${o>=3.5?'#166534':o>=2.5?'#92400e':'#991b1b'};margin-top:2px">${o>=4.2?'Team is performing well. Continue current trajectory.':o>=3.5?'Good health with minor areas to watch.':o>=2.5?'Some indicators need attention this period.':'Significant health issues require immediate action.'}</div></div></div>`;}
+  else bandBox.innerHTML='';
+  // dim bars — all sections
+  document.getElementById('sum-dim-bars').innerHTML=getActiveSections().map(sec=>{
+    const avg=sec.items.map(i=>scores[i.id]).filter(x=>x>0);
+    const a=avg.length?avg.reduce((a,b)=>a+b,0)/avg.length:0;
+    const c=a>0?scoreColor(a):'#b0b4c4';
+    return`<div class="dbar-row"><div class="dbar-lbl">${sec.icon} ${sec.name}</div><div class="dbar-track"><div class="dbar-fill" style="width:${a?a/5*100:0}%;background:${c}"></div></div><div class="dbar-sc" style="color:${c}">${a?a.toFixed(1):'—'}</div></div>`;
+  }).join('');
+  // flags
+  const flags=[];
+  getAllItems().forEach(i=>{const s=scores[i.id];if(!s)return;const sec=getActiveSections().find(x=>x.items.find(y=>y.id===i.id));if(s<=2)flags.push({sev:'red',label:i.label,sec:sec?.name,score:s,desc:i.map[s]});else if(s===3)flags.push({sev:'amber',label:i.label,sec:sec?.name,score:s,desc:i.map[s]});});
+  flags.sort((a,b)=>a.score-b.score);
+  document.getElementById('sum-flags-list').innerHTML=flags.length?flags.slice(0,12).map(f=>`<div class="flag-item"><span class="flag-sev flag-${f.sev}">${f.sev==='red'?'ALERT':'WATCH'}</span><span><strong>${f.label}</strong> — ${f.desc} <span style="font-size:11px;color:var(--text3)">(${f.sec})</span></span></div>`).join(''):'<div style="padding:8px 0;color:var(--text3);font-size:13px">No flags — complete scoring to surface issues.</div>';
+}
+
+// ── TREND ──
+function renderTrend(){
+  const history=getHistory();
+  document.getElementById('history-count').textContent=`${history.length} period${history.length!==1?'s':''} stored`;
+  const field=document.getElementById('trend-filter').value;
+  const fieldLabels={overall:'Overall health score',ops:'Operational health',sentiment:'Team sentiment',incidents:'Incident section avg',mttr:'MTTR vs. target',sla:'SLA attainment',fatigue:'Fatigue risk'};
+  document.getElementById('trend-chart-title').textContent=`${fieldLabels[field]||field} — trend`;
+  const points=history.slice().reverse().map(h=>{
+    let val=null;
+    if(field==='overall')val=h.overall_score;
+    else if(field==='ops'){const v=Object.entries(h.scores||{}).filter(([k])=>MGR_SECTIONS.some(s=>s.items.some(i=>i.id===k))).map(([,v])=>v).filter(x=>x>0);val=v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+    else if(field==='sentiment'){const v=Object.entries(h.scores||{}).filter(([k])=>TEAM_SECTIONS.some(s=>s.items.some(i=>i.id===k))).map(([,v])=>v).filter(x=>x>0);val=v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+    else{const sectionMap={incidents:'incidents',mttr:'incidents',sla:'sla',fatigue:'wellbeing'};const sid=sectionMap[field];if(sid){const sec=[...MGR_SECTIONS,...TEAM_SECTIONS].find(s=>s.id===sid);if(sec){const v=sec.items.map(i=>h.scores?.[i.id]).filter(x=>x>0);val=v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}}}
+    return{label:h.meta?.period||h.date?.slice(0,10)||'?',val,date:h.date};
+  });
+  // Draw canvas chart
+  const canvas=document.getElementById('trend-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.parentElement.clientWidth-32||600;
+  canvas.width=W;canvas.height=160;
+  ctx.clearRect(0,0,W,160);
+  const valid=points.filter(p=>p.val!==null);
+  if(valid.length<2){ctx.fillStyle='#8286a0';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('Not enough history to draw trend. Merge at least 2 periods.',W/2,80);
+  }else{
+    const pad={t:10,r:10,b:40,l:30};
+    const cw=W-pad.l-pad.r,ch=160-pad.t-pad.b;
+    const maxV=5,minV=1;
+    const xStep=cw/(points.length-1);
+    // grid lines
+    ctx.strokeStyle='#e5e7f0';ctx.lineWidth=1;
+    [1,2,3,4,5].forEach(y=>{const cy=pad.t+ch-(y-minV)/(maxV-minV)*ch;ctx.beginPath();ctx.moveTo(pad.l,cy);ctx.lineTo(pad.l+cw,cy);ctx.stroke();ctx.fillStyle='#8286a0';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(y,pad.l-4,cy+3);});
+    // line
+    ctx.beginPath();ctx.lineWidth=2.5;ctx.strokeStyle='#0369a1';
+    points.forEach((p,i)=>{if(p.val===null)return;const x=pad.l+i*xStep,y=pad.t+ch-(p.val-minV)/(maxV-minV)*ch;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.stroke();
+    // dots
+    points.forEach((p,i)=>{if(p.val===null)return;const x=pad.l+i*xStep,y=pad.t+ch-(p.val-minV)/(maxV-minV)*ch;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=scoreColor(p.val);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();});
+    // labels
+    ctx.fillStyle='#8286a0';ctx.font='10px sans-serif';ctx.textAlign='center';
+    const step=Math.max(1,Math.floor(points.length/8));
+    points.forEach((p,i)=>{if(i%step!==0)return;const x=pad.l+i*xStep;ctx.fillText(p.label.slice(0,10),x,160-8);});
+  }
+  // Period history rows
+  const ordered=[...history];
+  document.getElementById('period-history').innerHTML=ordered.length?ordered.map((h,idx)=>{
+    const prev=ordered[idx+1];const delta=prev&&prev.overall_score?(h.overall_score-prev.overall_score):null;
+    const deltaStr=delta!==null?(delta>0.1?`↑ +${delta.toFixed(2)}`:delta<-0.1?`↓ ${delta.toFixed(2)}`:'→ flat'):'—';
+    const deltaClass=delta===null?'delta-flat':delta>0.1?'delta-up':delta<-0.1?'delta-dn':'delta-flat';
+    const c=h.overall_score?scoreColor(h.overall_score):'#b0b4c4';
+    return`<div class="period-row">
+      <div class="period-label">${h.meta?.period||h.date?.slice(0,10)||'?'}<div style="font-size:10px;color:var(--text3)">${h.meta?.team||''}</div></div>
+      <div class="period-score" style="color:${c}">${h.overall_score?h.overall_score.toFixed(2):'—'}</div>
+      <div class="period-delta ${deltaClass}">${deltaStr}</div>
+      <div class="period-bar-track"><div class="period-bar-fill" style="width:${h.overall_score?h.overall_score/5*100:0}%;background:${c}"></div></div>
+      <div class="period-actions">
+        <button class="period-btn" onclick="loadPeriodForReview(${idx})">Load</button>
+        <button class="period-btn" onclick="deleteHistoryItem(${idx})">Delete</button>
+      </div>
+    </div>`;
+  }).join(''):'<div style="padding:12px 0;color:var(--text3);font-size:13px">No history yet. Merge sessions to build trend data.</div>';
+}
+
+function clearHistory(){if(!confirm('Delete all history? This cannot be undone.'))return;saveHistory([]);renderTrend();updateCompareLists();}
+function deleteHistoryItem(idx){const h=getHistory();h.splice(idx,1);saveHistory(h);renderTrend();updateCompareLists();}
+function loadPeriodForReview(idx){
+  const snap=getHistory()[idx];if(!snap)return;
+  // apply scores from snapshot to current session for summary display
+  Object.entries(snap.scores||{}).forEach(([k,v])=>{scores[k]=v;});
+  switchTab('summary');renderSummary();
+}
+
+// ── COMPARE ──
+function updateCompareLists(){
+  const history=getHistory();
+  const options=history.map((h,i)=>`<option value="${i}">${h.meta?.period||h.date?.slice(0,10)} — ${h.meta?.team||''}</option>`).join('');
+  document.getElementById('cmp-a').innerHTML='<option value="">Select period A...</option>'+options;
+  document.getElementById('cmp-b').innerHTML='<option value="">Select period B...</option>'+options;
+}
+
+function renderCompare(){
+  const ai=document.getElementById('cmp-a').value,bi=document.getElementById('cmp-b').value;
+  const out=document.getElementById('compare-output');
+  if(!ai||!bi||ai===bi){out.className='compare-output';return;}
+  const history=getHistory();
+  const A=history[parseInt(ai)],B=history[parseInt(bi)];
+  if(!A||!B){out.className='compare-output';return;}
+  const deltaO=(A.overall_score||0)-(B.overall_score||0);
+  const allItems=[...MGR_SECTIONS,...TEAM_SECTIONS].flatMap(s=>s.items);
+  const rows=allItems.map(item=>{
+    const aVal=A.scores?.[item.id],bVal=B.scores?.[item.id];
+    if(!aVal&&!bVal)return'';
+    const delta=(aVal||0)-(bVal||0);
+    const dc=delta>0.4?'#16a34a':delta<-0.4?'#dc2626':'var(--text3)';
+    const da=delta>0.4?`↑ +${delta.toFixed(1)}`:delta<-0.4?`↓ ${delta.toFixed(1)}`:'→';
+    const chipA=aVal?`<span style="background:${SC.bg[bi(aVal)]};color:${SC.txt[bi(aVal)]};padding:2px 7px;border-radius:3px;font-size:11px;font-weight:600">${aVal.toFixed(1)}</span>`:'—';
+    const chipB=bVal?`<span style="background:${SC.bg[bi(bVal)]};color:${SC.txt[bi(bVal)]};padding:2px 7px;border-radius:3px;font-size:11px;font-weight:600">${bVal.toFixed(1)}</span>`:'—';
+    return`<tr><td>${item.label}</td><td style="text-align:center">${chipA}</td><td style="text-align:center">${chipB}</td><td class="delta-cell" style="color:${dc};text-align:center">${da}</td></tr>`;
+  }).filter(Boolean).join('');
+  out.className='compare-output visible';
+  out.innerHTML=`<div class="sum-grid" style="margin-bottom:14px">
+    <div class="sum-mc"><div class="sum-lbl">Period A: ${A.meta?.period||'?'}</div><div class="sum-val" style="color:${scoreColor(A.overall_score||0)}">${A.overall_score?A.overall_score.toFixed(2):'—'}</div><div class="sum-sub">${A.meta?.team||''}</div></div>
+    <div class="sum-mc"><div class="sum-lbl">Period B: ${B.meta?.period||'?'}</div><div class="sum-val" style="color:${scoreColor(B.overall_score||0)}">${B.overall_score?B.overall_score.toFixed(2):'—'}</div><div class="sum-sub">${B.meta?.team||''}</div></div>
+    <div class="sum-mc"><div class="sum-lbl">Delta (A vs B)</div><div class="sum-val" style="color:${deltaO>0?'#16a34a':deltaO<0?'#dc2626':'var(--text3)'}">${deltaO>0?'+':''}${deltaO.toFixed(2)}</div><div class="sum-sub">${deltaO>0.2?'A is better':deltaO<-0.2?'B is better':'Similar'}</div></div>
+  </div>
+  <table class="compare-table"><thead><tr><th>Indicator</th><th style="text-align:center">Period A</th><th style="text-align:center">Period B</th><th style="text-align:center">Change</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── EXEC ──
+function renderExec(){
+  const o=calcOverall();const color=o>0?scoreColor(o):'var(--text3)';
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const typeLabels={noc:'NOC / 24×7 Shift',eng:'Engineering / On-call'};
+  const modeLabels={mgr:'Manager — operational data',team:'Team sentiment'};
+  const flags=[];getAllItems().forEach(i=>{const s=scores[i.id];if(!s)return;const sec=getActiveSections().find(x=>x.items.find(y=>y.id===i.id));if(s<=2)flags.push({sev:s===1?'red':'amber',label:i.label,sec:sec?.name,score:s,desc:i.map[s],note:notes[i.id]});else if(s===3)flags.push({sev:'watch',label:i.label,sec:sec?.name,score:s,desc:i.map[s],note:notes[i.id]});});
+  flags.sort((a,b)=>a.score-b.score);
+  const detail=getActiveSections().map(sec=>{
+    const avg=sec.items.map(i=>scores[i.id]).filter(x=>x>0);
+    const a=avg.length?avg.reduce((a,b)=>a+b,0)/avg.length:0;
+    const c=a>0?scoreColor(a):'var(--text3)';
+    const rows=sec.items.map(i=>{
+      const s=scores[i.id];
+      const chip=s?`<span style="background:${SC.solid[s]};color:${s===3?'#3a3000':'#fff'};padding:2px 7px;border-radius:3px;font-size:11px;font-weight:700">${s}</span>`:'<span style="color:var(--text3)">—</span>';
+      const noteHtml=notes[i.id]?`<div style="font-size:10px;color:var(--text3);font-style:italic;margin-top:2px">${notes[i.id]}</div>`:'';
+      return`<tr><td>${i.label}<br><span style="font-size:10px;color:var(--text3)">${i.sub}</span>${noteHtml}</td><td style="text-align:center">${chip}</td><td style="color:${s?SC.txt[bi(s)]:'var(--text3)'};font-size:12px">${s?i.map[s]:'—'}</td></tr>`;
+    }).join('');
+    return`<div class="exec-detail"><h2>${sec.icon} ${sec.name} <span style="font-size:13px;font-weight:400;color:${c}">${a?`${a.toFixed(1)} — ${bandLabel(a)}`:''}</span></h2><table class="etbl"><thead><tr><th>Indicator</th><th style="width:50px;text-align:center">Score</th><th style="width:170px">Rating</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  document.getElementById('exec-content').innerHTML=`
+    <div class="exec-hdr"><h1>Shift Health Assessment</h1>
+      <h2>${sessionMeta.team||'[Team]'}${sessionMeta.period?' — '+sessionMeta.period:''}</h2>
+      <div class="exec-meta">
+        <span><strong>Date:</strong> ${now}</span>
+        <span><strong>Type:</strong> ${typeLabels[teamType]}</span>
+        <span><strong>Session:</strong> ${modeLabels[sessionMode]}</span>
+        ${sessionMeta.name?`<span><strong>By:</strong> ${sessionMeta.name}</span>`:''}
+        ${sessionMeta.env?`<span><strong>Env:</strong> ${sessionMeta.env}</span>`:''}
+      </div>
+    </div>
+    <div class="exec-scorecard">
+      <div class="exec-score-box" style="border-color:${o?color+'40':'var(--border)'};background:${o?SC.bg[bi(o)]:'var(--surface2)'}">
+        <div class="exec-big" style="color:${o?color:'var(--text3)'}">${o?o.toFixed(2):'—'}</div>
+        <div class="exec-band" style="color:${o?color:'var(--text3)'}">${o?bandLabel(o):'Not scored'}</div>
+      </div>
+      <div class="exec-dims"><h3>Dimension breakdown</h3>
+        ${getActiveSections().map(sec=>{const avg=sec.items.map(i=>scores[i.id]).filter(x=>x>0);const a=avg.length?avg.reduce((a,b)=>a+b,0)/avg.length:0;const c=a>0?scoreColor(a):'#b0b4c4';return`<div class="dbar-row" style="margin-bottom:7px"><div class="dbar-lbl">${sec.icon} ${sec.name}</div><div class="dbar-track"><div class="dbar-fill" style="width:${a?a/5*100:0}%;background:${c}"></div></div><div class="dbar-sc" style="color:${c}">${a?a.toFixed(1):'—'}</div></div>`;}).join('')}
+      </div>
+    </div>
+    ${flags.length?`<div class="exec-flags"><h2>${flags.length} flag${flags.length!==1?'s':''} requiring attention</h2>
+      ${flags.map(f=>`<div class="efc" style="border-left:3px solid ${f.sev==='red'?'#dc2626':f.sev==='amber'?'#d97706':'#2563eb'}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="flag-sev flag-${f.sev==='watch'?'amber':f.sev}">${f.sev==='red'?'ALERT':f.sev==='amber'?'WATCH':'MONITOR'}</span>
+          <div><strong>${f.label}</strong> <span style="font-size:11px;color:var(--text3)">(${f.sec})</span></div></div>
+        <div style="font-size:12px;color:var(--text2)">${f.desc}</div>
+        ${f.note?`<div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:3px">${f.note}</div>`:''}
+      </div>`).join('')}
+    </div>`:''}
+    ${detail}`;
+}
+
+// ── JSON ──
+function buildPayload(){
+  return{schema_version:"1.0",tool:"shift-health",sessionMode,teamType,periodType,
+    meta:sessionMeta,assessment_date:new Date().toISOString(),
+    overall_score:parseFloat(calcOverall().toFixed(4)),
+    health_band:bandLabel(calcOverall()),
+    completion:parseFloat((countScored()/Math.max(getAllItems().length,1)).toFixed(4)),
+    scores:{...scores},notes:{...notes}};
+}
+function generateJSON(){document.getElementById('json-out').value=JSON.stringify(buildPayload(),null,2);}
+function exportSession(){generateJSON();switchTab('io');}
+function copyJSON(){generateJSON();navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',1500);}
+function downloadJSON(){
+  const p=buildPayload();
+  const team=(p.meta.team||'team').replace(/\s+/g,'-').toLowerCase();
+  const period=(p.meta.period||new Date().toISOString().slice(0,10)).replace(/\s+/g,'-');
+  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`shift-health-${p.sessionMode}-${team}-${period}.json`;a.click();
+}
+
+function loadMySession(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d.tool!=='shift-health'){document.getElementById('load-status').textContent='⚠ Not a shift health session file.';return;}
+    sessionMode=d.sessionMode||'mgr';teamType=d.teamType||'noc';periodType=d.periodType||'monthly';
+    sessionMeta=d.meta||{};
+    getAllItems().forEach(i=>{scores[i.id]=0;notes[i.id]='';});
+    Object.entries(d.scores||{}).forEach(([k,v])=>{if(v)scores[k]=v;});
+    Object.entries(d.notes||{}).forEach(([k,v])=>{if(v)notes[k]=v;});
+    document.getElementById('setup-screen').classList.add('hidden');
+    applySessionUI();renderSections();
+    // restore scores
+    getAllItems().forEach(i=>{if(scores[i.id]>0)setScore(i.id,scores[i.id]);});
+    // restore notes
+    getAllItems().forEach(i=>{if(notes[i.id]){const nt=document.getElementById(`note-${i.id}`);if(nt){nt.value=notes[i.id];nt.classList.add('vis');}}});
+    updateHealthBar();
+    document.getElementById('load-status').style.color='#16a34a';
+    document.getElementById('load-status').textContent=`✓ Loaded ${d.sessionMode} session for ${d.meta?.team||'team'} — ${d.meta?.period||''}`;
+    switchTab('assess');
+  }catch(err){document.getElementById('load-status').style.color='#dc2626';document.getElementById('load-status').textContent='Error: '+err.message;}};
+  r.readAsText(file);
+}
+
+function importSnapshot(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d.tool!=='shift-health-snapshot'){document.getElementById('hist-status').textContent='⚠ Not a shift health snapshot file.';return;}
+    const history=getHistory();
+    const existing=history.findIndex(h=>h.period_key===d.period_key);
+    if(existing>=0)history[existing]=d;else history.unshift(d);
+    if(history.length>52)history.splice(52);
+    saveHistory(history);renderTrend();updateCompareLists();
+    document.getElementById('hist-status').style.color='#16a34a';
+    document.getElementById('hist-status').textContent=`✓ Imported: ${d.meta?.period||d.period_key}`;
+  }catch(err){document.getElementById('hist-status').style.color='#dc2626';document.getElementById('hist-status').textContent='Error: '+err.message;}};
+  r.readAsText(file);
+}
+
+function resetAll(){if(!confirm('Start a new session? Current scores will be lost.'))return;Object.keys(scores).forEach(k=>scores[k]=0);Object.keys(notes).forEach(k=>notes[k]='');document.getElementById('setup-screen').classList.remove('hidden');}
+
+// ── TABS ──
+function switchTab(t){
+  const isMgr=sessionMode==='mgr';const ac=isMgr?'var(--mgr-color)':'var(--team-color)';
+  document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.style.borderBottomColor=x.dataset.tab===t?ac:'transparent';});
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));
+  if(t==='summary')renderSummary();
+  if(t==='exec')renderExec();
+  if(t==='trend'){renderTrend();updateCompareLists();}
+  if(t==='compare')updateCompareLists();
+}
+document.getElementById('tabs').addEventListener('click',e=>{const tab=e.target.closest('.tab');if(!tab)return;switchTab(tab.dataset.tab);});
+// defaults
+selectSessionMode('mgr');selectTeamType('noc');selectPeriodType('monthly');
+</script>
+</body>
+</html>

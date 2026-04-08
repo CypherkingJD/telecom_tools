@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ops Risk Deep-Dive</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface2: #f1f0ec;
+    --border: #e2e1da;
+    --border2: #c8c7bf;
+    --text: #1a1a18;
+    --text2: #555550;
+    --text3: #8a8a84;
+    --accent: #1a1a18;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Consolas','Courier New',monospace;
+  }
+
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+  .SC1-bg { background:#FCEBEB; } .SC1-txt { color:#791F1F; } .SC1-bdr { border-color:#F09595; } .SC1-solid { background:#E24B4A;color:#fff; }
+  .SC2-bg { background:#FFF0E0; } .SC2-txt { color:#7A3B00; } .SC2-bdr { border-color:#F5B96A; } .SC2-solid { background:#F5851A;color:#fff; }
+  .SC3-bg { background:#FEFCE0; } .SC3-txt { color:#6B5A00; } .SC3-bdr { border-color:#E8D840; } .SC3-solid { background:#D4C000;color:#3a3000; }
+  .SC4-bg { background:#EDFAE0; } .SC4-txt { color:#2E5E10; } .SC4-bdr { border-color:#A3D460; } .SC4-solid { background:#6DB82A;color:#fff; }
+  .SC5-bg { background:#E0FAE8; } .SC5-txt { color:#0A4E28; } .SC5-bdr { border-color:#3DC87A; } .SC5-solid { background:#1AC866;color:#fff; }
+
+  #app { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+
+  .topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+  .title-block h1 { font-size:20px; font-weight:600; }
+  .title-block p { font-size:12px; color:var(--text3); margin-top:2px; }
+
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .btn { padding:7px 14px; font-size:12px; font-weight:500; border-radius:var(--radius-sm); border:1px solid var(--border2); background:var(--surface); color:var(--text); cursor:pointer; white-space:nowrap; transition:background 0.15s; }
+  .btn:hover { background:var(--surface2); }
+  .btn-primary { background:#1a1a18; color:#fff; border-color:#1a1a18; }
+  .btn-primary:hover { background:#333; }
+  .btn-danger { background:#FCEBEB; color:#791F1F; border-color:#F09595; }
+  #overall-badge { padding:6px 14px; border-radius:20px; font-size:13px; font-weight:500; background:var(--surface2); color:var(--text3); border:1.5px solid var(--border); white-space:nowrap; }
+
+  .company-field { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .company-field label { font-size:12px; color:var(--text2); font-weight:500; }
+  .company-field input { padding:6px 10px; border:1px solid var(--border2); border-radius:var(--radius-sm); font-size:13px; background:var(--surface); color:var(--text); min-width:180px; }
+
+  .progress-wrap { margin-bottom:16px; }
+  .progress-track { height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+  .progress-fill { height:100%; background:#1AC866; border-radius:2px; transition:width 0.3s; }
+  .progress-label { font-size:11px; color:var(--text3); margin-top:4px; }
+
+  .legend { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text2); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; }
+
+  .tabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:20px; overflow-x:auto; }
+  .tab { padding:9px 18px; font-size:13px; cursor:pointer; border:none; background:none; color:var(--text3); border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; }
+  .tab.active { color:var(--text); border-bottom:2px solid var(--text); font-weight:500; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* ── AREA CARDS ── */
+  .area-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0; margin-bottom:16px; overflow:hidden; }
+  .area-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 12px; cursor:pointer; user-select:none; }
+  .area-header:hover { background:var(--surface2); }
+  .area-left { display:flex; align-items:center; gap:10px; }
+  .area-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .area-name { font-size:14px; font-weight:600; color:var(--text); }
+  .area-sub { font-size:11px; color:var(--text3); margin-top:1px; }
+  .area-right { display:flex; align-items:center; gap:10px; }
+  .area-bar-wrap { width:100px; height:5px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+  .area-bar-inner { height:100%; border-radius:3px; transition:width 0.3s; }
+  .area-score-pill { font-size:11px; font-weight:500; padding:3px 10px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text3); white-space:nowrap; min-width:110px; text-align:center; }
+  .area-chevron { font-size:12px; color:var(--text3); transition:transform 0.2s; }
+  .area-chevron.open { transform:rotate(90deg); }
+
+  .area-body { border-top:1px solid var(--border); padding:0 18px 12px; display:none; }
+  .area-body.open { display:block; }
+
+  /* ── CATEGORY SECTIONS ── */
+  .category-section { margin-top:14px; }
+  .category-label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed var(--border2); }
+
+  /* ── OBJECTIVE ROWS ── */
+  .obj-row { display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start; padding:9px 0; border-top:1px solid var(--border); }
+  .obj-row:first-of-type { border-top:none; }
+  .obj-label { font-size:13px; color:var(--text); font-weight:500; }
+  .obj-sub { font-size:11px; color:var(--text3); margin-top:2px; line-height:1.4; }
+  .obj-selected-label { display:none; font-size:11px; font-weight:500; margin-top:5px; padding:3px 8px; border-radius:4px; }
+  .score-col { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+  .score-buttons { display:flex; gap:4px; }
+  .score-btn {
+    width:32px; height:32px; border-radius:var(--radius-sm);
+    border:1.5px solid transparent; cursor:pointer;
+    font-size:13px; font-weight:600; transition:transform 0.1s, box-shadow 0.1s;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .score-btn:active { transform:scale(0.92); }
+  .score-btn.b1 { background:#FCEBEB; color:#791F1F; border-color:#F09595; }
+  .score-btn.b2 { background:#FFF0E0; color:#7A3B00; border-color:#F5B96A; }
+  .score-btn.b3 { background:#FEFCE0; color:#6B5A00; border-color:#E8D840; }
+  .score-btn.b4 { background:#EDFAE0; color:#2E5E10; border-color:#A3D460; }
+  .score-btn.b5 { background:#E0FAE8; color:#0A4E28; border-color:#3DC87A; }
+  .score-btn.b1.sel { background:#E24B4A; color:#fff; border-color:#A32D2D; box-shadow:0 0 0 3px #F0959560; }
+  .score-btn.b2.sel { background:#F5851A; color:#fff; border-color:#7A3B00; box-shadow:0 0 0 3px #F5B96A60; }
+  .score-btn.b3.sel { background:#D4C000; color:#3a3000; border-color:#6B5A00; box-shadow:0 0 0 3px #E8D84060; }
+  .score-btn.b4.sel { background:#6DB82A; color:#fff; border-color:#2E5E10; box-shadow:0 0 0 3px #A3D46060; }
+  .score-btn.b5.sel { background:#1AC866; color:#fff; border-color:#0A4E28; box-shadow:0 0 0 3px #3DC87A60; }
+
+  /* ── NOTES ── */
+  .obj-note { width:100%; margin-top:6px; padding:6px 8px; font-size:11px; font-family:var(--font); border:1px solid var(--border2); border-radius:var(--radius-sm); background:var(--surface2); color:var(--text); resize:none; min-height:44px; display:none; }
+  .obj-note.visible { display:block; }
+  .note-toggle { font-size:10px; color:var(--text3); cursor:pointer; margin-top:4px; text-decoration:underline; }
+
+  /* ── SUMMARY ── */
+  .metrics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:20px; }
+  .metric-card { background:var(--surface2); border-radius:var(--radius-sm); padding:12px 14px; }
+  .metric-label { font-size:11px; color:var(--text3); margin-bottom:4px; }
+  .metric-value { font-size:22px; font-weight:600; color:var(--text); }
+  .metric-sub { font-size:11px; color:var(--text3); margin-top:2px; }
+
+  .risk-band-block { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:16px; border:1.5px solid var(--border); }
+  .risk-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+
+  .area-bars-section h3 { font-size:13px; font-weight:600; margin-bottom:10px; }
+  .dbar-row { display:grid; grid-template-columns:200px 1fr 40px; gap:10px; align-items:center; margin-bottom:7px; }
+  .dbar-label { font-size:12px; color:var(--text2); }
+  .dbar-track { height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+  .dbar-fill { height:100%; border-radius:3px; transition:width 0.3s; }
+  .dbar-score { font-size:12px; font-weight:600; text-align:right; color:var(--text2); }
+
+  .findings-section h3 { font-size:13px; font-weight:600; margin-bottom:10px; }
+  .findings-list { list-style:none; }
+  .finding-item { display:flex; gap:10px; padding:8px 0; border-top:1px solid var(--border); font-size:13px; align-items:flex-start; }
+  .sev-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:3px; white-space:nowrap; flex-shrink:0; margin-top:1px; letter-spacing:0.03em; }
+  .sev-c { background:#FCEBEB; color:#791F1F; }
+  .sev-h { background:#FFF0E0; color:#7A3B00; }
+  .sev-m { background:#FEFCE0; color:#6B5A00; }
+
+  /* ── EXEC ── */
+  .exec-header { text-align:center; padding:28px 0 20px; border-bottom:2px solid var(--border); margin-bottom:24px; }
+  .exec-header h1 { font-size:24px; font-weight:700; }
+  .exec-header h2 { font-size:15px; font-weight:400; color:var(--text2); margin-top:4px; }
+  .exec-meta { display:flex; gap:20px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .exec-meta-item { font-size:12px; color:var(--text2); }
+  .exec-scorecard { display:grid; grid-template-columns:1fr 1.5fr; gap:20px; margin-bottom:24px; }
+  .exec-overall { padding:22px; border-radius:var(--radius); border:2px solid var(--border); text-align:center; }
+  .exec-overall .big-score { font-size:52px; font-weight:700; line-height:1; }
+  .exec-overall .band-label { font-size:15px; font-weight:600; margin-top:6px; }
+  .exec-overall .band-desc { font-size:12px; color:var(--text2); margin-top:6px; }
+  .exec-areas { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; }
+  .exec-areas h3 { font-size:13px; font-weight:600; margin-bottom:12px; }
+  .exec-findings { margin-bottom:24px; }
+  .exec-findings h2 { font-size:15px; font-weight:600; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px; }
+  .exec-finding-card { border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; margin-bottom:8px; break-inside:avoid; }
+  .exec-finding-header { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .exec-detail-section { margin-bottom:24px; }
+  .exec-detail-section h2 { font-size:15px; font-weight:600; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:8px; }
+  .exec-crit-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .exec-crit-table th { text-align:left; padding:6px 10px; background:var(--surface2); font-weight:600; font-size:11px; color:var(--text2); border-bottom:1px solid var(--border); }
+  .exec-crit-table td { padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  .score-chip { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:5px; font-size:12px; font-weight:700; }
+
+  /* ── JSON ── */
+  .json-area { width:100%; height:280px; font-family:var(--mono); font-size:11px; padding:12px; border:1px solid var(--border2); border-radius:var(--radius-sm); background:var(--surface2); color:var(--text); resize:vertical; }
+  .json-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .load-section { margin-top:24px; border-top:1px solid var(--border); padding-top:20px; }
+  .load-section h3 { font-size:13px; font-weight:600; margin-bottom:8px; }
+  .file-drop { border:2px dashed var(--border2); border-radius:var(--radius-sm); padding:20px; text-align:center; color:var(--text3); font-size:13px; cursor:pointer; margin-bottom:10px; }
+  .file-drop:hover { border-color:var(--text3); background:var(--surface2); }
+  #file-input { display:none; }
+
+  @media print {
+    body { background:#fff; font-size:12px; }
+    #app { padding:0; max-width:100%; }
+    .topbar .toolbar, .tabs, .tab-panel:not(#tab-exec) { display:none !important; }
+    #tab-exec { display:block !important; }
+    .no-print { display:none !important; }
+    .area-card { break-inside:avoid; }
+    .score-btn { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  }
+
+  @media (max-width:600px) {
+    .exec-scorecard { grid-template-columns:1fr; }
+    .dbar-row { grid-template-columns:120px 1fr 34px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>Operations Risk Deep-Dive</h1>
+      <p>Granular scoring for network &amp; IT operations maturity &nbsp;|&nbsp; 1 = Critical &nbsp;&middot;&nbsp; 5 = Minimal risk</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div id="overall-badge">Not scored</div>
+      <div class="toolbar">
+        <button class="btn" onclick="switchTab('exec')">&#128438; Executive view</button>
+        <button class="btn btn-primary" onclick="window.print()">&#128438; Print</button>
+        <button class="btn" onclick="exportJSON()">&#8681; Export JSON</button>
+        <button class="btn btn-danger" onclick="resetAll()">&#8635; Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="company-field">
+    <label>Company / Team:</label>
+    <input type="text" id="company-name" placeholder="Enter name..." oninput="updateExec()">
+    <label style="margin-left:12px">Assessor:</label>
+    <input type="text" id="assessor-name" placeholder="Your name..." oninput="updateExec()">
+    <label style="margin-left:12px">Period:</label>
+    <input type="text" id="period-name" placeholder="e.g. Q2 2025" oninput="updateExec()">
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 objectives scored</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>1 — Critical</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>2 — High risk</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Moderate</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>4 — Low risk</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>5 — Minimal</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="score">Scoring</button>
+    <button class="tab" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="exec">Executive Display</button>
+    <button class="tab" data-tab="io">Export / Import</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-score">
+    <div id="areas-container"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-summary">
+    <div class="metrics-grid" id="sum-metrics"></div>
+    <div id="sum-band"></div>
+    <div class="area-bars-section" style="margin-bottom:20px"><h3>Area breakdown</h3><div id="sum-bars"></div></div>
+    <div class="findings-section"><h3>Prioritized findings</h3><ul class="findings-list" id="sum-findings"></ul></div>
+  </div>
+
+  <div class="tab-panel" id="tab-exec">
+    <div id="exec-content"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-io">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px;">Export current assessment as JSON</h3>
+    <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+    <div class="json-actions">
+      <button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button>
+      <button class="btn" onclick="copyJSON()">Copy to clipboard</button>
+      <button class="btn" onclick="downloadJSON()">&#8681; Download .json</button>
+    </div>
+    <div class="load-section">
+      <h3>Load assessment from JSON</h3>
+      <div class="file-drop" onclick="document.getElementById('file-input').click()">
+        Click to select a JSON file &nbsp;&mdash;&nbsp; or paste JSON below and click Load
+        <input type="file" id="file-input" accept=".json" onchange="loadFromFile(event)">
+      </div>
+      <textarea class="json-area" id="json-in" placeholder="Paste JSON here..."></textarea>
+      <div class="json-actions"><button class="btn btn-primary" onclick="loadFromPaste()">Load from pasted JSON</button></div>
+      <div id="load-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SC = {
+  solid: ["","#E24B4A","#F5851A","#D4C000","#6DB82A","#1AC866"],
+  bg:    ["","#FCEBEB","#FFF0E0","#FEFCE0","#EDFAE0","#E0FAE8"],
+  bdr:   ["","#F09595","#F5B96A","#E8D840","#A3D460","#3DC87A"],
+  txt:   ["","#791F1F","#7A3B00","#6B5A00","#2E5E10","#0A4E28"],
+  lbl:   ["","Critical","High risk","Moderate","Low risk","Minimal"],
+};
+
+const BANDS = [
+  { min:0,   max:1.5, label:"Critical risk",  desc:"Immediate operational remediation required." },
+  { min:1.5, max:2.5, label:"High risk",       desc:"Significant operational gaps demanding prioritized action." },
+  { min:2.5, max:3.5, label:"Moderate risk",   desc:"Functional but with notable improvement areas." },
+  { min:3.5, max:4.2, label:"Low risk",        desc:"Strong operations posture with targeted improvements needed." },
+  { min:4.2, max:6,   label:"Minimal risk",    desc:"Best-in-class operational maturity." },
+];
+
+function getBand(s) { return s ? BANDS.find(b=>s>=b.min&&s<b.max)||BANDS[0] : null; }
+function bandIdx(s) { if(!s)return 0; if(s<1.5)return 1; if(s<2.5)return 2; if(s<3.5)return 3; if(s<4.2)return 4; return 5; }
+
+// ── OPERATIONS AREAS WITH GRANULAR OBJECTIVES ──
+const AREAS = [
+  {
+    id:"incident", name:"Incident Management", icon:"🚨", sub:"Detection, response, and resolution process maturity",
+    categories:[
+      { name:"Detection & alerting", objectives:[
+        { id:"im_alert_coverage",  label:"Monitoring coverage completeness",    sub:"% of critical systems with active alerting (network, compute, storage, app layers)", map:{1:"<40% coverage",2:"40–60%",3:"60–80%",4:"80–95%",5:">95% covered"} },
+        { id:"im_alert_noise",     label:"Alert noise / false positive rate",   sub:"Ratio of actionable to non-actionable alerts; tuning cadence", map:{1:">70% noise",2:"50–70%",3:"30–50%",4:"10–30%",5:"<10% noise"} },
+        { id:"im_alert_latency",   label:"Alert-to-ticket latency",             sub:"Time from anomaly detection to incident ticket creation", map:{1:">30min",2:"15–30min",3:"5–15min",4:"1–5min",5:"<1min automated"} },
+        { id:"im_synthetic",       label:"Synthetic/proactive monitoring",       sub:"Synthetic transactions, ping tests, threshold pre-alerts before user impact", map:{1:"None",2:"Ad hoc",3:"Key paths monitored",4:"Broad coverage",5:"Full synthetic suite"} },
+      ]},
+      { name:"Response process", objectives:[
+        { id:"im_runbooks",        label:"Runbook completeness & currency",      sub:"% of common incident types with documented, tested runbooks", map:{1:"No runbooks",2:"Partial/outdated",3:"Core incidents covered",4:"Mostly current",5:"Full library, reviewed quarterly"} },
+        { id:"im_severity",        label:"Severity classification accuracy",     sub:"Consistent SEV1/SEV2/SEV3 classification; escalation triggered correctly", map:{1:"Ad hoc/inconsistent",2:"Partial framework",3:"Defined but inconsistently applied",4:"Consistently applied",5:"Automated with human override"} },
+        { id:"im_escalation",      label:"Escalation path clarity",              sub:"On-call rosters current, escalation matrix documented, bridge bridge ownership clear", map:{1:"No documented path",2:"Informal",3:"Documented but stale",4:"Current and tested",5:"Automated + tested quarterly"} },
+        { id:"im_comms",           label:"Stakeholder communication discipline", sub:"Status page updates, exec notifications, customer comms during SEV1/2", map:{1:"Ad hoc/none",2:"Inconsistent",3:"Structured templates, inconsistent use",4:"Consistently executed",5:"Automated status + tested playbook"} },
+      ]},
+      { name:"Metrics & improvement", objectives:[
+        { id:"im_mttr",            label:"MTTR benchmarks & trending",           sub:"Defined MTTR targets by severity; trend tracked month-over-month", map:{1:"Not measured",2:"Measured, no target",3:"Target defined, not trending",4:"Target + trending",5:"Target + trend + improvement loop"} },
+        { id:"im_p1_freq",         label:"P1/SEV1 frequency trend",              sub:"Count of critical incidents per month; improving, stable, or worsening", map:{1:"Increasing trend",2:"Stable but high",3:"Stable, moderate",4:"Improving",5:"Low + declining"} },
+        { id:"im_repeat",          label:"Repeat incident rate",                 sub:"% of incidents that are recurrences of a prior event within 90 days", map:{1:">40% repeat",2:"25–40%",3:"10–25%",4:"5–10%",5:"<5%"} },
+      ]},
+    ]
+  },
+  {
+    id:"change", name:"Change Management", icon:"🔄", sub:"Change risk, approval process, and rollback capability",
+    categories:[
+      { name:"Process governance", objectives:[
+        { id:"cm_cab",             label:"CAB / change approval process",        sub:"Change Advisory Board cadence, emergency change process, approval rigor", map:{1:"No formal process",2:"Informal review",3:"CAB exists, inconsistent",4:"Consistent CAB + emergency path",5:"Mature CAB + metrics + automation"} },
+        { id:"cm_classification",  label:"Change risk classification",           sub:"Standard/normal/emergency/major change categorization; risk scoring", map:{1:"All changes treated equally",2:"High/low only",3:"3-tier classification",4:"Risk-scored per change",5:"Automated risk scoring + approval routing"} },
+        { id:"cm_freeze",          label:"Change freeze & blackout discipline",  sub:"Defined freeze windows (holidays, peak periods); adherence tracked", map:{1:"No freeze windows",2:"Informal",3:"Defined but not enforced",4:"Enforced",5:"Automated gates + adherence metrics"} },
+      ]},
+      { name:"Execution quality", objectives:[
+        { id:"cm_testing",         label:"Pre-change testing completeness",      sub:"Lab/staging validation, unit tests, peer review before prod push", map:{1:"No testing",2:"Ad hoc",3:"Core changes tested",4:"Mandatory staging",5:"Full CI/CD pipeline + automated tests"} },
+        { id:"cm_backout",         label:"Rollback / backout plan quality",      sub:"Every change has a documented, tested rollback procedure", map:{1:"No backout plans",2:"Verbal only",3:"Documented, untested",4:"Documented + tested for major changes",5:"Automated rollback for all changes"} },
+        { id:"cm_window",          label:"Maintenance window adherence",         sub:"Changes executed within approved windows; overruns tracked", map:{1:"Windows frequently missed",2:"Often exceeded",3:"Usually within window",4:"Strong adherence",5:">95% on-time completion"} },
+        { id:"cm_cir",             label:"Change-induced incident rate",         sub:"% of changes that cause unplanned outages or degradations", map:{1:">15% of changes cause incidents",2:"8–15%",3:"3–8%",4:"1–3%",5:"<1%"} },
+      ]},
+      { name:"Configuration management", objectives:[
+        { id:"cm_cmdb",            label:"CMDB accuracy & currency",             sub:"Configuration items current; discovery tools in use; drift detection", map:{1:"No CMDB",2:"Partial/stale",3:"Exists but manually maintained",4:"Mostly accurate + auto-discovery",5:"Real-time sync + drift alerts"} },
+        { id:"cm_baseline",        label:"Configuration baseline management",    sub:"Golden configs defined; variance detected and actioned", map:{1:"No baselines",2:"Informal",3:"Baselines defined, not enforced",4:"Baselines enforced",5:"Automated compliance + auto-remediation"} },
+      ]},
+    ]
+  },
+  {
+    id:"noc", name:"NOC / SOC Maturity", icon:"🖥️", sub:"Network operations center capabilities, tooling, and team effectiveness",
+    categories:[
+      { name:"Tooling & visibility", objectives:[
+        { id:"noc_nms",            label:"NMS / monitoring platform coverage",   sub:"Zabbix, SolarWinds, LibreNMS, or equivalent — device coverage %, trap ingestion", map:{1:"No NMS",2:"Partial (<50% devices)",3:"Majority covered",4:">90% covered",5:"100% + SNMP traps + syslog"} },
+        { id:"noc_apm",            label:"APM / synthetic monitoring",           sub:"Application performance monitoring alongside network monitoring", map:{1:"None",2:"Manual checks",3:"Basic uptime monitoring",4:"APM deployed",5:"Full APM + synthetic + user journey"} },
+        { id:"noc_dashboard",      label:"NOC dashboard & single pane of glass", sub:"Operators have unified view; no tool-switching required for triage", map:{1:"Multiple disconnected tools",2:"Some integration",3:"Partial correlation",4:"Mostly unified",5:"Single pane, correlated, contextual"} },
+        { id:"noc_log_mgmt",       label:"Log aggregation & search",             sub:"Centralized syslog, SNMP trap store, searchable, retained per policy", map:{1:"No centralized logs",2:"Partial aggregation",3:"Centralized, limited search",4:"Searchable + alertable",5:"SIEM-grade + anomaly detection"} },
+      ]},
+      { name:"Team capability", objectives:[
+        { id:"noc_tier",           label:"Tiered analyst structure",             sub:"L1/L2/L3 or equivalent tiers; clear escalation criteria between tiers", map:{1:"No structure",2:"Informal tiers",3:"Defined tiers, weak escalation",4:"Functional tiers + escalation SLA",5:"Mature tiered model + metrics"} },
+        { id:"noc_staffing",       label:"Staffing & on-call coverage",          sub:"24/7 or follow-the-sun coverage; on-call adequacy; fatigue management", map:{1:"Business hours only",2:"On-call only (unreliable)",3:"On-call with adequate response",4:"24/7 partial coverage",5:"Full 24/7 + fatigue rotation"} },
+        { id:"noc_training",       label:"Technical training & certification",   sub:"Team certified on key platforms; cross-training depth; new hire ramp", map:{1:"No formal training",2:"Ad hoc",3:"Vendor training for some",4:"Structured program",5:"Continuous + certification tracking"} },
+        { id:"noc_kb",             label:"Knowledge base & institutional memory",sub:"Documented troubleshooting guides, topology docs, vendor contacts current", map:{1:"None",2:"Tribal knowledge only",3:"Partial documentation",4:"Maintained KB",5:"Searchable KB + version controlled"} },
+      ]},
+      { name:"Process quality", objectives:[
+        { id:"noc_sop",            label:"SOP adherence & audit",                sub:"Standard operating procedures followed; deviations tracked", map:{1:"No SOPs",2:"SOPs exist, not followed",3:"Followed inconsistently",4:"Generally followed",5:"Audited quarterly + deviation tracking"} },
+        { id:"noc_handoff",        label:"Shift handoff quality",                sub:"Formal handoff process; open incidents documented; context transferred", map:{1:"No formal handoff",2:"Verbal only",3:"Basic handoff log",4:"Structured handoff doc",5:"Tool-assisted + tracked completion"} },
+      ]},
+    ]
+  },
+  {
+    id:"postmortem", name:"Postmortem & RCA", icon:"📋", sub:"Root cause analysis rigor, action item follow-through, and learning culture",
+    categories:[
+      { name:"RCA process", objectives:[
+        { id:"pm_coverage",        label:"Postmortem coverage rate",             sub:"% of SEV1/SEV2 incidents that receive a completed postmortem", map:{1:"<30%",2:"30–60%",3:"60–80%",4:"80–95%",5:"100% SEV1, >90% SEV2"} },
+        { id:"pm_timeline",        label:"Postmortem completion timeliness",     sub:"Time from incident close to completed postmortem doc", map:{1:">30 days",2:"15–30 days",3:"7–15 days",4:"3–7 days",5:"<72 hours"} },
+        { id:"pm_depth",           label:"Root cause vs. symptom distinction",   sub:"RCA correctly identifies underlying cause, not just observable symptoms", map:{1:"Symptom-only",2:"Usually symptoms",3:"Mixed quality",4:"Usually root cause",5:"Consistently root cause + 5-why or fishbone"} },
+        { id:"pm_timeline_acc",    label:"Timeline reconstruction accuracy",     sub:"Incident timeline accurately reconstructed from logs/tools with timestamps", map:{1:"No timeline",2:"Approximate/incomplete",3:"Key events captured",4:"Detailed timeline",5:"Tool-generated, verified, complete"} },
+      ]},
+      { name:"Action items & follow-through", objectives:[
+        { id:"pm_actions",         label:"Corrective action quality",            sub:"Actions are specific, assigned, dated; mitigation vs. resolution distinguished", map:{1:"No actions defined",2:"Vague actions",3:"Actions defined, no owners",4:"Owned + dated",5:"SMART actions + tracking system"} },
+        { id:"pm_closure",         label:"Action item closure rate",             sub:"% of postmortem action items closed within committed timeline", map:{1:"<25% closed",2:"25–50%",3:"50–75%",4:"75–90%",5:">90%"} },
+        { id:"pm_recurrence",      label:"Recurrence prevention effectiveness", sub:"Corrective actions actually prevent recurrence of the same root cause", map:{1:"Same issues recur frequently",2:"Partial reduction",3:"Some improvement",4:"Notable reduction",5:"Near-zero recurrence from actioned items"} },
+      ]},
+      { name:"Learning & culture", objectives:[
+        { id:"pm_sharing",         label:"Postmortem sharing & visibility",      sub:"RCAs distributed to stakeholders; searchable repository maintained", map:{1:"Not shared",2:"Shared ad hoc",3:"Team-level sharing",4:"Org-wide sharing",5:"Searchable repo + trend analysis"} },
+        { id:"pm_blameless",       label:"Blameless culture indicators",         sub:"Psychological safety to report errors; focus on systems not individuals", map:{1:"Blame culture evident",2:"Mixed signals",3:"Neutral",4:"Mostly blameless",5:"Strong blameless culture + leadership modeled"} },
+        { id:"pm_trend",           label:"Trend analysis across incidents",      sub:"Patterns identified across multiple postmortems; systemic issues surfaced", map:{1:"No trend analysis",2:"Ad hoc",3:"Periodic reviews",4:"Quarterly trend reporting",5:"Continuous + fed into planning"} },
+      ]},
+    ]
+  },
+  {
+    id:"workforce", name:"Workforce & Knowledge", icon:"👥", sub:"Team resilience, skills depth, and operational knowledge management",
+    categories:[
+      { name:"Staffing resilience", objectives:[
+        { id:"wf_key_person",      label:"Key person dependency risk",           sub:"% of critical functions with only one person capable of executing", map:{1:">60% single-person dependent",2:"40–60%",3:"20–40%",4:"10–20%",5:"<10%"} },
+        { id:"wf_cross_train",     label:"Cross-training depth",                 sub:"Backup coverage for critical roles; documentation enables handoff", map:{1:"No cross-training",2:"Minimal",3:"Core roles only",4:"Most roles covered",5:"Full coverage + validated quarterly"} },
+        { id:"wf_contractor",      label:"Contractor / vendor dependency",       sub:"Reliance on 3rd-party contractors for mission-critical operations functions", map:{1:"Critical functions outsourced with no oversight",2:"High dependency",3:"Moderate",4:"Low dependency",5:"Staff can fully own all critical functions"} },
+      ]},
+      { name:"Skills & development", objectives:[
+        { id:"wf_skills_gap",      label:"Skills gap vs. technology roadmap",    sub:"Team skills aligned to current + planned platform stack (5G, SD-WAN, cloud)", map:{1:"Major skills gap",2:"Significant gap",3:"Partial alignment",4:"Mostly aligned",5:"Fully aligned + training pipeline"} },
+        { id:"wf_cert",            label:"Certification & formal training",      sub:"Relevant certs held (CCNA/CCNP, JNCIA, cloud, ITIL); training budget allocated", map:{1:"No certifications",2:"Few/informal",3:"Some key certs",4:"Core team certified",5:"Comprehensive + tracked"} },
+        { id:"wf_retention",       label:"Staff retention & turnover rate",      sub:"Annual turnover in ops team; exit interview themes; morale indicators", map:{1:">30% annual turnover",2:"20–30%",3:"10–20%",4:"5–10%",5:"<5%"} },
+      ]},
+      { name:"Documentation quality", objectives:[
+        { id:"wf_topology",        label:"Network topology documentation",       sub:"Layer 2/3 diagrams current, accurate, accessible; version controlled", map:{1:"Non-existent",2:"Outdated/partial",3:"Exists but not maintained",4:"Maintained annually",5:"Version controlled + updated on change"} },
+        { id:"wf_sop_coverage",    label:"SOP / procedure coverage",             sub:"Written procedures for routine tasks, emergency responses, vendor management", map:{1:"No written procedures",2:"A few key procedures",3:"Core tasks covered",4:"Comprehensive coverage",5:"Full library + review cycle"} },
+        { id:"wf_contact",         label:"Vendor & contact directory currency",  sub:"Vendor support contacts, TAC numbers, escalation paths current", map:{1:"No contact directory",2:"Partially current",3:"Mostly current",4:"Current + tested annually",5:"Current + integrated into ticketing system"} },
+      ]},
+    ]
+  },
+  {
+    id:"vendor", name:"Vendor & Contract Management", icon:"🤝", sub:"Vendor SLA performance, relationship health, and contract risk",
+    categories:[
+      { name:"SLA management", objectives:[
+        { id:"vm_sla_defined",     label:"SLA definition completeness",          sub:"Formal SLAs in place for all critical vendors; uptime, response time, escalation defined", map:{1:"No SLAs",2:"Informal agreements",3:"SLAs for some vendors",4:"SLAs for all critical vendors",5:"SLAs + penalties + review cadence"} },
+        { id:"vm_sla_tracking",    label:"SLA tracking & reporting",             sub:"SLA performance tracked monthly; vendor scorecards maintained", map:{1:"Not tracked",2:"Ad hoc tracking",3:"Tracked, not reported",4:"Monthly reporting",5:"Automated tracking + executive dashboard"} },
+        { id:"vm_sla_breach",      label:"SLA breach response process",          sub:"Defined process for vendor SLA breach notification, credit pursuit, escalation", map:{1:"No process",2:"Ad hoc",3:"Process defined, rarely used",4:"Active breach management",5:"Automated breach detection + legal escalation path"} },
+      ]},
+      { name:"Vendor relationships", objectives:[
+        { id:"vm_qbr",             label:"Quarterly business review cadence",    sub:"QBRs held with critical vendors; action items tracked", map:{1:"No regular reviews",2:"Annual only",3:"Semi-annual",4:"Quarterly",5:"Quarterly + exec-level escalation path"} },
+        { id:"vm_concentration",   label:"Vendor concentration risk",            sub:"Single-vendor dependency for critical platforms; alternative sourcing options", map:{1:"100% single vendor critical path",2:"High concentration",3:"Moderate",4:"Diversified",5:"Multi-vendor with documented alternates"} },
+        { id:"vm_support",         label:"TAC / support responsiveness",         sub:"Vendor support response times meet SLA; escalation path effective", map:{1:"Consistently poor",2:"Below SLA",3:"At SLA",4:"Above SLA",5:"Premium support + dedicated TAM"} },
+      ]},
+    ]
+  },
+];
+
+const scores = {};
+const notes = {};
+AREAS.forEach(a => a.categories.forEach(cat => cat.objectives.forEach(o => { scores[o.id]=0; notes[o.id]=''; })));
+
+function areaAvg(a) {
+  const v=a.categories.flatMap(cat=>cat.objectives.map(o=>scores[o.id])).filter(x=>x>0);
+  return v.length ? v.reduce((a,b)=>a+b,0)/v.length : 0;
+}
+
+function totalObjs() { return AREAS.reduce((a,ar)=>a+ar.categories.reduce((b,c)=>b+c.objectives.length,0),0); }
+function countScored() { return Object.values(scores).filter(v=>v>0).length; }
+
+function calcOverall() {
+  const v=Object.values(scores).filter(x=>x>0);
+  return v.length ? v.reduce((a,b)=>a+b,0)/v.length : 0;
+}
+
+function setScore(oid, val) {
+  scores[oid] = val;
+  document.querySelectorAll(`[data-oid="${oid}"]`).forEach(btn => {
+    const bv=parseInt(btn.dataset.val);
+    btn.className=`score-btn b${bv}`+(bv===val?' sel':'');
+  });
+  const lbl=document.getElementById(`lbl-${oid}`);
+  if(lbl) {
+    const area=AREAS.find(a=>a.categories.some(c=>c.objectives.find(o=>o.id===oid)));
+    const obj=area&&area.categories.flatMap(c=>c.objectives).find(o=>o.id===oid);
+    if(val>0&&obj) { lbl.textContent=obj.map[val]; lbl.style.cssText=`display:inline-block;background:${SC.bg[val]};color:${SC.txt[val]};`; }
+    else { lbl.style.display='none'; }
+  }
+  const area=AREAS.find(a=>a.categories.some(c=>c.objectives.find(o=>o.id===oid)));
+  updateAreaPill(area);
+  updateProgress();
+  updateBadge();
+}
+
+function updateAreaPill(area) {
+  if(!area)return;
+  const avg=areaAvg(area), pill=document.getElementById(`apill-${area.id}`), bar=document.getElementById(`abar-${area.id}`);
+  const sc=area.categories.flatMap(c=>c.objectives).filter(o=>scores[o.id]>0).length;
+  const tot=area.categories.flatMap(c=>c.objectives).length;
+  if(pill) {
+    if(avg>0) { const bi=bandIdx(avg); pill.style.cssText=`background:${SC.bg[bi]};color:${SC.txt[bi]};border-color:${SC.bdr[bi]};`; pill.textContent=`${avg.toFixed(1)} — ${SC.lbl[bi]}  (${sc}/${tot})`; }
+    else { pill.style.cssText='background:var(--surface2);color:var(--text3);border-color:var(--border);'; pill.textContent=`Not scored (0/${tot})`; }
+  }
+  if(bar) { bar.style.width=(avg>0?(avg/5*100):0)+'%'; bar.style.background=avg>0?SC.solid[bandIdx(avg)]:''; }
+}
+
+function updateProgress() {
+  const sc=countScored(),tot=totalObjs();
+  document.getElementById('prog-fill').style.width=Math.round(sc/tot*100)+'%';
+  document.getElementById('prog-label').textContent=`${sc} of ${tot} objectives scored`;
+}
+
+function updateBadge() {
+  const o=calcOverall(), badge=document.getElementById('overall-badge');
+  if(!o){badge.style.cssText='';badge.textContent='Not scored';return;}
+  const bi=bandIdx(o); badge.style.cssText=`background:${SC.bg[bi]};color:${SC.txt[bi]};border-color:${SC.bdr[bi]};`;
+  badge.textContent=`${SC.lbl[bi]} — ${o.toFixed(2)}`;
+}
+
+function toggleArea(id) {
+  const body=document.getElementById(`abody-${id}`), chev=document.getElementById(`achev-${id}`);
+  const open=body.classList.toggle('open'); chev.classList.toggle('open',open);
+}
+
+function toggleNote(oid) {
+  const note=document.getElementById(`note-${oid}`); note.classList.toggle('visible');
+  if(note.classList.contains('visible')) note.focus();
+}
+
+function renderAreas() {
+  const c=document.getElementById('areas-container');
+  c.innerHTML='';
+  AREAS.forEach(area => {
+    const cats=area.categories.map(cat=>`
+      <div class="category-section">
+        <div class="category-label">${cat.name}</div>
+        ${cat.objectives.map(obj=>`
+          <div class="obj-row">
+            <div>
+              <div class="obj-label">${obj.label}</div>
+              <div class="obj-sub">${obj.sub}</div>
+              <span class="obj-selected-label" id="lbl-${obj.id}"></span>
+              <div class="note-toggle" onclick="toggleNote('${obj.id}')">+ add note</div>
+              <textarea class="obj-note" id="note-${obj.id}" placeholder="Notes, evidence, context..." onchange="notes['${obj.id}']=this.value" rows="2"></textarea>
+            </div>
+            <div class="score-col">
+              <div class="score-buttons">
+                ${[1,2,3,4,5].map(v=>`<button class="score-btn b${v}" data-oid="${obj.id}" data-val="${v}" onclick="setScore('${obj.id}',${v})">${v}</button>`).join('')}
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('');
+
+    const tot=area.categories.flatMap(c=>c.objectives).length;
+    const div=document.createElement('div');
+    div.className='area-card';
+    div.innerHTML=`
+      <div class="area-header" onclick="toggleArea('${area.id}')">
+        <div class="area-left">
+          <div class="area-icon" style="background:var(--surface2)">${area.icon}</div>
+          <div>
+            <div class="area-name">${area.name}</div>
+            <div class="area-sub">${area.sub}</div>
+          </div>
+        </div>
+        <div class="area-right">
+          <div class="area-bar-wrap"><div class="area-bar-inner" id="abar-${area.id}"></div></div>
+          <div class="area-score-pill" id="apill-${area.id}">Not scored (0/${tot})</div>
+          <div class="area-chevron" id="achev-${area.id}">&#9654;</div>
+        </div>
+      </div>
+      <div class="area-body" id="abody-${area.id}">${cats}</div>`;
+    c.appendChild(div);
+  });
+  // open first area by default
+  toggleArea(AREAS[0].id);
+}
+
+function renderSummary() {
+  const o=calcOverall(), bi=bandIdx(o), band=getBand(o), sc=countScored(), tot=totalObjs();
+  document.getElementById('sum-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Overall score</div><div class="metric-value" style="color:${o?SC.solid[bi]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div><div class="metric-sub">out of 5.00</div></div>
+    <div class="metric-card"><div class="metric-label">Risk band</div><div class="metric-value" style="font-size:15px;margin-top:4px;color:${o?SC.solid[bi]:'var(--text3)'}">${o?band.label:'—'}</div></div>
+    <div class="metric-card"><div class="metric-label">Completion</div><div class="metric-value">${Math.round(sc/tot*100)}%</div><div class="metric-sub">${sc}/${tot} objectives</div></div>
+    <div class="metric-card"><div class="metric-label">Areas assessed</div><div class="metric-value">${AREAS.filter(a=>areaAvg(a)>0).length}/${AREAS.length}</div></div>`;
+
+  document.getElementById('sum-band').innerHTML = o ? `<div class="risk-band-block" style="background:${SC.bg[bi]};border-color:${SC.bdr[bi]}">
+    <div class="risk-dot" style="background:${SC.solid[bi]}"></div>
+    <div><div style="font-size:14px;font-weight:600;color:${SC.txt[bi]}">${band.label}</div>
+    <div style="font-size:12px;color:${SC.txt[bi]};opacity:0.8;margin-top:2px">${band.desc}</div></div>
+  </div>` : '';
+
+  document.getElementById('sum-bars').innerHTML=AREAS.map(a=>{
+    const as=areaAvg(a),abi=bandIdx(as);
+    return `<div class="dbar-row">
+      <div class="dbar-label">${a.icon} ${a.name}</div>
+      <div class="dbar-track"><div class="dbar-fill" style="width:${as?as/5*100:0}%;background:${as?SC.solid[abi]:''}"></div></div>
+      <div class="dbar-score" style="color:${as?SC.solid[abi]:'var(--text3)'}">${as?as.toFixed(1):'—'}</div>
+    </div>`;
+  }).join('');
+
+  const findings=[];
+  AREAS.forEach(a=>a.categories.forEach(cat=>cat.objectives.forEach(o=>{
+    const s=scores[o.id];
+    if(s>0&&s<=3) findings.push({sev:s===1?'c':s===2?'h':'m',label:o.label,area:a.name,cat:cat.name,score:s,desc:o.map[s]});
+  })));
+  findings.sort((a,b)=>a.score-b.score);
+  document.getElementById('sum-findings').innerHTML=findings.length
+    ?findings.slice(0,12).map(f=>`<li class="finding-item">
+        <span class="sev-badge sev-${f.sev}">${f.sev==='c'?'CRITICAL':f.sev==='h'?'HIGH':'MEDIUM'}</span>
+        <span><strong>${f.label}</strong> &mdash; ${f.desc} <span style="color:var(--text3);font-size:11px">(${f.area} › ${f.cat})</span></span>
+      </li>`).join('')
+    :'<li style="padding:8px 0;color:var(--text3);font-size:13px">No findings yet.</li>';
+}
+
+function updateExec() { if(document.getElementById('tab-exec').classList.contains('active')) renderExec(); }
+
+function renderExec() {
+  const o=calcOverall(), bi=bandIdx(o), band=getBand(o);
+  const company=document.getElementById('company-name').value||'[Company / Team]';
+  const assessor=document.getElementById('assessor-name').value||'[Assessor]';
+  const period=document.getElementById('period-name').value||'';
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  const findings=[];
+  AREAS.forEach(a=>a.categories.forEach(cat=>cat.objectives.forEach(obj=>{
+    const s=scores[obj.id];
+    if(s>0&&s<=3) findings.push({sev:s===1?'CRITICAL':s===2?'HIGH':'MEDIUM',label:obj.label,area:a.name,cat:cat.name,score:s,desc:obj.map[s],sub:obj.sub,note:notes[obj.id]});
+  })));
+  findings.sort((a,b)=>a.score-b.score);
+
+  const areaDetail=AREAS.map(area=>{
+    const as=areaAvg(area),abi=bandIdx(as);
+    const rows=area.categories.map(cat=>`
+      <tr><td colspan="3" style="background:var(--surface2);font-size:11px;font-weight:600;color:var(--text3);padding:5px 10px;text-transform:uppercase;letter-spacing:0.05em">${cat.name}</td></tr>
+      ${cat.objectives.map(o=>{
+        const s=scores[o.id];
+        const chip=s?`<span class="score-chip" style="background:${SC.solid[s]};color:${s===3?'#3a3000':'#fff'}">${s}</span>`:`<span class="score-chip" style="background:var(--surface2);color:var(--text3)">—</span>`;
+        const noteHtml=notes[o.id]?`<div style="font-size:10px;color:var(--text3);margin-top:3px;font-style:italic">Note: ${notes[o.id]}</div>`:'';
+        return `<tr>
+          <td>${o.label}<br><span style="font-size:10px;color:var(--text3)">${o.sub}</span>${noteHtml}</td>
+          <td style="text-align:center">${chip}</td>
+          <td style="color:${s?SC.txt[bandIdx(s)]:'var(--text3)'};font-size:12px">${s?o.map[s]:'—'}</td>
+        </tr>`;
+      }).join('')}`).join('');
+
+    return `<div class="exec-detail-section">
+      <h2>${area.icon} ${area.name} &nbsp;<span style="font-size:13px;font-weight:400;color:${as?SC.solid[abi]:'var(--text3)'}">${as?`${as.toFixed(1)} — ${SC.lbl[abi]}`:''}</span></h2>
+      <table class="exec-crit-table">
+        <thead><tr><th>Objective</th><th style="width:50px;text-align:center">Score</th><th style="width:180px">Rating</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('exec-content').innerHTML=`
+    <div class="exec-header">
+      <h1>Operations Risk Assessment</h1>
+      <h2>${company}</h2>
+      <div class="exec-meta">
+        <div class="exec-meta-item"><strong>Date:</strong> ${now}</div>
+        ${period?`<div class="exec-meta-item"><strong>Period:</strong> ${period}</div>`:''}
+        <div class="exec-meta-item"><strong>Assessor:</strong> ${assessor}</div>
+        <div class="exec-meta-item"><strong>Completion:</strong> ${countScored()}/${totalObjs()} objectives</div>
+      </div>
+    </div>
+
+    <div class="exec-scorecard">
+      <div class="exec-overall" style="background:${o?SC.bg[bi]:'var(--surface2)'};border-color:${o?SC.bdr[bi]:'var(--border)'}">
+        <div class="big-score" style="color:${o?SC.solid[bi]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div>
+        <div class="band-label" style="color:${o?SC.txt[bi]:'var(--text3)'}">${o?band.label:'Not scored'}</div>
+        <div class="band-desc">${o?band.desc:'Complete scoring to generate results.'}</div>
+      </div>
+      <div class="exec-areas">
+        <h3>Area scores</h3>
+        ${AREAS.map(a=>{const as=areaAvg(a),abi=bandIdx(as);return`<div class="dbar-row" style="margin-bottom:8px">
+          <div class="dbar-label">${a.icon} ${a.name}</div>
+          <div class="dbar-track"><div class="dbar-fill" style="width:${as?as/5*100:0}%;background:${as?SC.solid[abi]:''}"></div></div>
+          <div class="dbar-score" style="color:${as?SC.solid[abi]:'var(--text3)'}">${as?as.toFixed(1):'—'}</div>
+        </div>`;}).join('')}
+      </div>
+    </div>
+
+    ${findings.length?`<div class="exec-findings">
+      <h2>Prioritized findings — ${findings.length} items requiring attention</h2>
+      ${findings.map(f=>`<div class="exec-finding-card" style="border-left:3px solid ${f.score===1?SC.solid[1]:f.score===2?SC.solid[2]:SC.solid[3]}">
+        <div class="exec-finding-header">
+          <span class="sev-badge sev-${f.score===1?'c':f.score===2?'h':'m'}">${f.sev}</span>
+          <div>
+            <div style="font-size:13px;font-weight:600">${f.label}</div>
+            <div style="font-size:11px;color:var(--text3)">${f.area} › ${f.cat}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:4px;font-size:12px;margin-top:4px">
+          <span style="color:var(--text3);font-weight:500">Current:</span><span style="color:${SC.txt[f.score]}">${f.desc}</span>
+          <span style="color:var(--text3);font-weight:500">Scope:</span><span style="color:var(--text2)">${f.sub}</span>
+          ${f.note?`<span style="color:var(--text3);font-weight:500">Note:</span><span style="color:var(--text2);font-style:italic">${f.note}</span>`:''}
+        </div>
+      </div>`).join('')}
+    </div>`:''}
+
+    ${areaDetail}
+  `;
+}
+
+// ── JSON ──
+function buildPayload() {
+  return {
+    schema_version:"1.0", tool:"telecom-risk-operations",
+    company:document.getElementById('company-name').value,
+    assessor:document.getElementById('assessor-name').value,
+    period:document.getElementById('period-name').value,
+    assessment_date:new Date().toISOString(),
+    overall_score:parseFloat(calcOverall().toFixed(4)),
+    risk_band:getBand(calcOverall())?.label||null,
+    completion:{scored:countScored(),total:totalObjs()},
+    areas:AREAS.map(a=>({
+      area_id:a.id, area_name:a.name, area_avg:parseFloat(areaAvg(a).toFixed(4)),
+      categories:a.categories.map(cat=>({
+        name:cat.name,
+        objectives:cat.objectives.map(o=>({id:o.id,label:o.label,score:scores[o.id],rating:scores[o.id]?o.map[scores[o.id]]:null,note:notes[o.id]||null}))
+      }))
+    }))
+  };
+}
+
+function generateJSON() { document.getElementById('json-out').value=JSON.stringify(buildPayload(),null,2); }
+function exportJSON() { generateJSON(); switchTab('io'); }
+
+function copyJSON() {
+  generateJSON();
+  navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});
+  const btn=event.target; btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy to clipboard',1500);
+}
+
+function downloadJSON() {
+  const p=buildPayload();
+  const name=(p.company||'ops-assessment').replace(/\s+/g,'-').toLowerCase();
+  const date=new Date().toISOString().slice(0,10);
+  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`ops-risk-${name}-${date}.json`; a.click();
+}
+
+function applyPayload(data) {
+  try {
+    if(data.company) document.getElementById('company-name').value=data.company;
+    if(data.assessor) document.getElementById('assessor-name').value=data.assessor;
+    if(data.period) document.getElementById('period-name').value=data.period;
+    data.areas.forEach(a=>a.categories.forEach(cat=>cat.objectives.forEach(o=>{
+      if(o.score&&o.score>0) setScore(o.id,o.score);
+      if(o.note) { notes[o.id]=o.note; const el=document.getElementById(`note-${o.id}`); if(el){el.value=o.note;el.classList.add('visible');} }
+    })));
+    AREAS.forEach(a=>updateAreaPill(a));
+    updateProgress(); updateBadge();
+    document.getElementById('load-status').style.color='#2E5E10';
+    document.getElementById('load-status').textContent=`✓ Loaded: ${data.company||'Assessment'} — ${data.period||''}`;
+    switchTab('score');
+  } catch(e) {
+    document.getElementById('load-status').style.color='#791F1F';
+    document.getElementById('load-status').textContent='Error: '+e.message;
+  }
+}
+
+function loadFromPaste() {
+  try { applyPayload(JSON.parse(document.getElementById('json-in').value)); }
+  catch(e) { document.getElementById('load-status').style.color='#791F1F'; document.getElementById('load-status').textContent='Invalid JSON: '+e.message; }
+}
+
+function loadFromFile(evt) {
+  const file=evt.target.files[0]; if(!file)return;
+  const r=new FileReader(); r.onload=e=>{try{applyPayload(JSON.parse(e.target.result));}catch(err){document.getElementById('load-status').style.color='#791F1F';document.getElementById('load-status').textContent='Error: '+err.message;}};
+  r.readAsText(file);
+}
+
+function resetAll() {
+  if(!confirm('Reset all scores and notes? This cannot be undone.'))return;
+  AREAS.forEach(a=>a.categories.forEach(cat=>cat.objectives.forEach(o=>{scores[o.id]=0;notes[o.id]='';})));
+  renderAreas(); updateProgress(); updateBadge();
+  document.getElementById('company-name').value='';
+  document.getElementById('assessor-name').value='';
+  document.getElementById('period-name').value='';
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));
+  if(t==='summary') renderSummary();
+  if(t==='exec') renderExec();
+}
+
+document.getElementById('tabs').addEventListener('click',e=>{
+  const tab=e.target.closest('.tab'); if(!tab)return; switchTab(tab.dataset.tab);
+});
+
+renderAreas();
+</script>
+</body>
+</html>

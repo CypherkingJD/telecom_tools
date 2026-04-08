@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telecom Infrastructure Risk Profiler</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f8f6;
+    --surface: #ffffff;
+    --surface2: #f2f1ed;
+    --border: #e0dfd8;
+    --border2: #cccbc3;
+    --text: #1a1a18;
+    --text2: #5a5a55;
+    --text3: #8a8a84;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Consolas', 'Courier New', monospace;
+  }
+
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+  /* ── SCORE COLORS ── */
+  .s1-bg { background: #FCEBEB; } .s1-text { color: #791F1F; } .s1-border { border-color: #F09595; } .s1-solid { background: #E24B4A; color: #fff; }
+  .s2-bg { background: #FFF0E0; } .s2-text { color: #7A3B00; } .s2-border { border-color: #F5B96A; } .s2-solid { background: #F5851A; color: #fff; }
+  .s3-bg { background: #FEFCE0; } .s3-text { color: #6B5A00; } .s3-border { border-color: #E8D840; } .s3-solid { background: #D4C000; color: #3a3000; }
+  .s4-bg { background: #EDFAE0; } .s4-text { color: #2E5E10; } .s4-border { border-color: #A3D460; } .s4-solid { background: #6DB82A; color: #fff; }
+  .s5-bg { background: #E0FAE8; } .s5-text { color: #0A4E28; } .s5-border { border-color: #3DC87A; } .s5-solid { background: #1AC866; color: #fff; }
+
+  /* ── LAYOUT ── */
+  #app { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .title-block h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .title-block p { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 7px 14px; font-size: 12px; font-weight: 500; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .btn-primary:hover { background: #333; }
+  .btn-danger { background: #FCEBEB; color: #791F1F; border-color: #F09595; }
+  .btn-danger:hover { background: #F7C1C1; }
+  #overall-badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: var(--surface2); color: var(--text3); border: 1.5px solid var(--border); white-space: nowrap; }
+
+  /* ── PROGRESS ── */
+  .progress-wrap { margin-bottom: 20px; }
+  .progress-track { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1AC866; border-radius: 2px; transition: width 0.3s; }
+  .progress-label { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; gap: 0; overflow-x: auto; }
+  .tab { padding: 9px 18px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--text3); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .tab.active { color: var(--text); border-bottom: 2px solid var(--text); font-weight: 500; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── LEGEND ── */
+  .legend { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ── DOMAIN CARDS ── */
+  .domain-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 14px; }
+  .domain-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .domain-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .domain-weight { font-size: 11px; color: var(--text3); background: var(--surface2); padding: 2px 8px; border-radius: 20px; }
+  .domain-score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .domain-bar-wrap { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .domain-bar-inner { height: 100%; border-radius: 3px; transition: width 0.3s, background 0.3s; width: 0%; }
+  .domain-score-pill { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text3); white-space: nowrap; }
+
+  /* ── CRITERIA ── */
+  .criterion-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--border); }
+  .criterion-label { font-size: 13px; color: var(--text); font-weight: 500; }
+  .criterion-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .criterion-selected-label { display: none; font-size: 11px; font-weight: 500; margin-top: 5px; padding: 3px 8px; border-radius: 4px; }
+  .score-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .score-buttons { display: flex; gap: 5px; }
+  .score-btn {
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+    border: 1.5px solid transparent; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .score-btn:active { transform: scale(0.92); }
+  .score-btn.b1 { background: #FCEBEB; color: #791F1F; border-color: #F09595; }
+  .score-btn.b2 { background: #FFF0E0; color: #7A3B00; border-color: #F5B96A; }
+  .score-btn.b3 { background: #FEFCE0; color: #6B5A00; border-color: #E8D840; }
+  .score-btn.b4 { background: #EDFAE0; color: #2E5E10; border-color: #A3D460; }
+  .score-btn.b5 { background: #E0FAE8; color: #0A4E28; border-color: #3DC87A; }
+  .score-btn.b1.sel { background: #E24B4A; color: #fff; border-color: #A32D2D; box-shadow: 0 0 0 3px #F0959560; }
+  .score-btn.b2.sel { background: #F5851A; color: #fff; border-color: #7A3B00; box-shadow: 0 0 0 3px #F5B96A60; }
+  .score-btn.b3.sel { background: #D4C000; color: #3a3000; border-color: #6B5A00; box-shadow: 0 0 0 3px #E8D84060; }
+  .score-btn.b4.sel { background: #6DB82A; color: #fff; border-color: #2E5E10; box-shadow: 0 0 0 3px #A3D46060; }
+  .score-btn.b5.sel { background: #1AC866; color: #fff; border-color: #0A4E28; box-shadow: 0 0 0 3px #3DC87A60; }
+
+  /* ── SUMMARY ── */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .metric-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .metric-value { font-size: 24px; font-weight: 600; color: var(--text); }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .risk-band-block { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; border: 1.5px solid var(--border); }
+  .risk-band-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  .domain-bars-section { margin-bottom: 20px; }
+  .domain-bars-section h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  .dbar-row { display: grid; grid-template-columns: 160px 1fr 40px; gap: 10px; align-items: center; margin-bottom: 7px; }
+  .dbar-label { font-size: 12px; color: var(--text2); }
+  .dbar-track { height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .dbar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .dbar-score { font-size: 12px; font-weight: 600; text-align: right; color: var(--text2); }
+
+  .findings-section h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  .findings-list { list-style: none; }
+  .finding-item { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; align-items: flex-start; }
+  .sev-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; letter-spacing: 0.03em; }
+  .sev-c { background: #FCEBEB; color: #791F1F; }
+  .sev-h { background: #FFF0E0; color: #7A3B00; }
+  .sev-m { background: #FEFCE0; color: #6B5A00; }
+
+  /* ── JSON / LOAD ── */
+  .json-area { width: 100%; height: 300px; font-family: var(--mono); font-size: 11px; padding: 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); resize: vertical; }
+  .json-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .load-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .load-section h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+
+  /* ── PRINT / EXECUTIVE ── */
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    #app { padding: 0; max-width: 100%; }
+    .topbar .toolbar, .tabs, .tab-panel:not(#tab-exec) { display: none !important; }
+    #tab-exec { display: block !important; }
+    .no-print { display: none !important; }
+    .exec-page { page-break-after: always; }
+    .domain-card { break-inside: avoid; border: 1px solid #ccc; }
+    .score-btn { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
+
+  .exec-header { text-align: center; padding: 32px 0 24px; border-bottom: 2px solid var(--border); margin-bottom: 28px; }
+  .exec-header h1 { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+  .exec-header p { color: var(--text3); font-size: 13px; margin-top: 6px; }
+  .exec-meta { display: flex; gap: 24px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .exec-meta-item { font-size: 12px; color: var(--text2); }
+  .exec-meta-item strong { color: var(--text); }
+
+  .exec-scorecard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  .exec-overall { padding: 24px; border-radius: var(--radius); border: 2px solid var(--border); text-align: center; }
+  .exec-overall .big-score { font-size: 56px; font-weight: 700; line-height: 1; }
+  .exec-overall .band-label { font-size: 16px; font-weight: 600; margin-top: 6px; }
+  .exec-overall .band-desc { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  .exec-domains { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .exec-domains h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+
+  .exec-findings { margin-bottom: 28px; }
+  .exec-findings h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .exec-finding-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 10px; break-inside: avoid; }
+  .exec-finding-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .exec-finding-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .exec-finding-domain { font-size: 11px; color: var(--text3); }
+  .exec-finding-row { display: grid; grid-template-columns: 80px 1fr; gap: 6px; font-size: 12px; margin-top: 4px; }
+  .exec-finding-key { color: var(--text3); font-weight: 500; }
+
+  .exec-domain-detail { margin-bottom: 28px; }
+  .exec-domain-detail h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .exec-crit-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .exec-crit-table th { text-align: left; padding: 6px 10px; background: var(--surface2); font-weight: 600; font-size: 11px; color: var(--text2); border-bottom: 1px solid var(--border); }
+  .exec-crit-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .score-chip { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 5px; font-size: 12px; font-weight: 700; border: 1.5px solid transparent; }
+
+  /* ── FILE INPUT ── */
+  .file-drop { border: 2px dashed var(--border2); border-radius: var(--radius-sm); padding: 24px; text-align: center; color: var(--text3); font-size: 13px; cursor: pointer; margin-bottom: 10px; }
+  .file-drop:hover { border-color: var(--text3); background: var(--surface2); }
+  #file-input { display: none; }
+
+  /* ── COMPANY FIELD ── */
+  .company-field { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .company-field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .company-field input { padding: 6px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; background: var(--surface); color: var(--text); min-width: 200px; }
+  .company-field input:focus { outline: 2px solid #1AC866; outline-offset: 1px; }
+
+  @media (max-width: 600px) {
+    .exec-scorecard { grid-template-columns: 1fr; }
+    .dbar-row { grid-template-columns: 110px 1fr 36px; }
+    .criterion-row { grid-template-columns: 1fr; }
+    .score-col { align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>Telecom Infrastructure Risk Profiler</h1>
+      <p>Corporate-level scoring framework &mdash; 1 = Critical risk &nbsp;|&nbsp; 5 = Minimal risk</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div id="overall-badge">Not scored</div>
+      <div class="toolbar">
+        <button class="btn" onclick="switchTab('exec')">&#128438; Executive view</button>
+        <button class="btn btn-primary" onclick="window.print()">&#128438; Print</button>
+        <button class="btn" onclick="exportJSON()">&#8681; Export JSON</button>
+        <button class="btn btn-danger" onclick="resetAll()">&#8635; Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="company-field">
+    <label>Company / Entity:</label>
+    <input type="text" id="company-name" placeholder="Enter company name..." oninput="updateExec()">
+    <label style="margin-left:12px">Assessor:</label>
+    <input type="text" id="assessor-name" placeholder="Assessor name..." oninput="updateExec()">
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 of 20 criteria scored</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>1 — Critical</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>2 — High risk</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Moderate</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>4 — Low risk</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>5 — Minimal</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="score">Scoring</button>
+    <button class="tab" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="exec">Executive Display</button>
+    <button class="tab" data-tab="io">Export / Import</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-score">
+    <div id="domains-container"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-summary">
+    <div class="metrics-grid" id="sum-metrics"></div>
+    <div id="sum-band"></div>
+    <div class="domain-bars-section"><h3>Domain breakdown</h3><div id="sum-bars"></div></div>
+    <div class="findings-section"><h3>Prioritized findings</h3><ul class="findings-list" id="sum-findings"></ul></div>
+  </div>
+
+  <div class="tab-panel" id="tab-exec">
+    <div id="exec-content"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-io">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px;">Export current assessment as JSON</h3>
+    <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+    <div class="json-actions">
+      <button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button>
+      <button class="btn" onclick="copyJSON()">Copy to clipboard</button>
+      <button class="btn" onclick="downloadJSON()">&#8681; Download .json</button>
+    </div>
+
+    <div class="load-section">
+      <h3>Load assessment from JSON</h3>
+      <div class="file-drop" onclick="document.getElementById('file-input').click()">
+        Click to select a JSON file &nbsp;&mdash;&nbsp; or paste JSON below and click Load
+        <input type="file" id="file-input" accept=".json" onchange="loadFromFile(event)">
+      </div>
+      <textarea class="json-area" id="json-in" placeholder="Paste JSON here..."></textarea>
+      <div class="json-actions">
+        <button class="btn btn-primary" onclick="loadFromPaste()">Load from pasted JSON</button>
+      </div>
+      <div id="load-status" style="margin-top:8px;font-size:12px;color:var(--text3);"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SC = {
+  solid: ["","#E24B4A","#F5851A","#D4C000","#6DB82A","#1AC866"],
+  bg:    ["","#FCEBEB","#FFF0E0","#FEFCE0","#EDFAE0","#E0FAE8"],
+  bdr:   ["","#F09595","#F5B96A","#E8D840","#A3D460","#3DC87A"],
+  txt:   ["","#791F1F","#7A3B00","#6B5A00","#2E5E10","#0A4E28"],
+  lbl:   ["","Critical","High risk","Moderate","Low risk","Minimal"],
+};
+
+const BANDS = [
+  { min:0,   max:1.5, label:"Critical risk",  desc:"Immediate remediation required across multiple dimensions." },
+  { min:1.5, max:2.5, label:"High risk",       desc:"Significant gaps requiring prioritized investment." },
+  { min:2.5, max:3.5, label:"Moderate risk",   desc:"Functional baseline with notable improvement areas." },
+  { min:3.5, max:4.2, label:"Low risk",        desc:"Strong posture with targeted optimizations needed." },
+  { min:4.2, max:6,   label:"Minimal risk",    desc:"Best-in-class infrastructure resilience." },
+];
+
+function getBand(s) { return s ? BANDS.find(b => s >= b.min && s < b.max) || BANDS[0] : null; }
+function bandIdx(s) { if (!s) return 0; if(s<1.5)return 1; if(s<2.5)return 2; if(s<3.5)return 3; if(s<4.2)return 4; return 5; }
+
+const DOMAINS = [
+  { id:"physical", name:"Physical Infrastructure", weight:0.18, criteria:[
+    { id:"geo_dist",   label:"Geographic distribution",       sub:"Asset spread across regions/zones",           map:{1:"Highly concentrated",2:"Some clustering",3:"Moderate spread",4:"Good distribution",5:"Fully diverse"} },
+    { id:"asset_age",  label:"Infrastructure age & EOL",      sub:"Proportion of aged/end-of-life assets",       map:{1:"Critically aged",2:"Significant EOL risk",3:"Mixed vintage",4:"Mostly current",5:"Modern fleet"} },
+    { id:"redundancy", label:"Site-level redundancy",         sub:"Power, cooling, access path duplication",     map:{1:"No redundancy",2:"Partial N+0",3:"N+1 partial",4:"N+1 full",5:"N+2 or better"} },
+    { id:"env_hazard", label:"Environmental hazard exposure", sub:"Flood, seismic, storm, climate risk",         map:{1:"Extreme exposure",2:"High exposure",3:"Moderate",4:"Low",5:"Minimal"} },
+  ]},
+  { id:"network", name:"Network Architecture", weight:0.20, criteria:[
+    { id:"spof",        label:"Single points of failure",     sub:"SPOFs in transport, aggregation, core",       map:{1:"Many SPOFs",2:"Several SPOFs",3:"Few SPOFs",4:"Isolated SPOF",5:"None identified"} },
+    { id:"route_div",   label:"Route diversity",              sub:"Fiber route separation, conduit independence",map:{1:"Shared single path",2:"Mostly shared",3:"Some diversity",4:"Good diversity",5:"Full independence"} },
+    { id:"vendor_conc", label:"Vendor concentration",         sub:"Reliance on single OEM for critical platforms",map:{1:"Single vendor",2:"High concentration",3:"Moderate",4:"Diversified",5:"Multi-vendor"} },
+    { id:"tech_stack",  label:"Technology stack modernity",   sub:"Legacy TDM vs. IP/MPLS/SD-WAN",              map:{1:"Heavy legacy",2:"Mostly legacy",3:"Mixed",4:"Mostly modern",5:"Cloud-native"} },
+  ]},
+  { id:"dependency", name:"Dependency & Supply Chain", weight:0.14, criteria:[
+    { id:"third_party", label:"Third-party infrastructure",   sub:"Tower, fiber, colocation, peering reliance",  map:{1:"Critical dependency",2:"High dependency",3:"Moderate",4:"Low dependency",5:"Fully owned"} },
+    { id:"power_chain", label:"Power supply chain",           sub:"Grid reliability, generator fuel, UPS",       map:{1:"Single grid, no backup",2:"Minimal backup",3:"Partial backup",4:"Good backup",5:"Full redundancy"} },
+    { id:"hw_supply",   label:"Hardware supply chain risk",   sub:"Lead times, sanctions exposure, EOL parts",   map:{1:"Severe exposure",2:"High risk",3:"Moderate",4:"Low risk",5:"Resilient"} },
+  ]},
+  { id:"operations", name:"Operational Maturity", weight:0.18, criteria:[
+    { id:"mttr",        label:"MTTR / restoration speed",     sub:"Mean time to restore benchmarks",             map:{1:"No benchmarks",2:">4hrs typical",3:"1–4hrs",4:"<1hr",5:"<15min P1"} },
+    { id:"change_risk", label:"Change-induced incident rate", sub:"Outages caused by planned changes",           map:{1:"Frequent",2:"Common",3:"Occasional",4:"Rare",5:"Near zero"} },
+    { id:"noc_maturity",label:"NOC/SOC maturity",             sub:"Monitoring coverage, escalation, runbooks",   map:{1:"Reactive only",2:"Basic monitoring",3:"Structured",4:"Mature",5:"AI-assisted"} },
+    { id:"workforce",   label:"Workforce & knowledge risk",   sub:"Key-person dependency, skills gaps",          map:{1:"Critical gaps",2:"High dependency",3:"Moderate",4:"Documented",5:"Resilient"} },
+  ]},
+  { id:"cyber", name:"Cyber & Security", weight:0.18, criteria:[
+    { id:"attack_surface",label:"Attack surface exposure",    sub:"Mgmt plane, OAM, legacy systems, unpatched FW",map:{1:"Severely exposed",2:"High exposure",3:"Moderate",4:"Managed",5:"Minimal"} },
+    { id:"compliance",    label:"Compliance posture",         sub:"NIST CSF, CISA, FCC, NDAA alignment",         map:{1:"Non-compliant",2:"Partial",3:"Mostly compliant",4:"Compliant",5:"Certified"} },
+    { id:"supply_sec",    label:"Supply chain security",      sub:"Trusted vendor framework, NDAA compliance",   map:{1:"Not evaluated",2:"Partially evaluated",3:"Partially compliant",4:"Mostly compliant",5:"Fully compliant"} },
+  ]},
+  { id:"regulatory", name:"Regulatory & Compliance", weight:0.12, criteria:[
+    { id:"license_risk",  label:"License & spectrum dependency",sub:"CBRS PAL, spectrum lease, buildout obligations",map:{1:"High exposure",2:"Notable risk",3:"Moderate",4:"Low risk",5:"Secure"} },
+    { id:"nors",          label:"NORS outage track record",    sub:"FCC reportable outage history",               map:{1:"Repeated violations",2:"Frequent reports",3:"Occasional",4:"Rare reports",5:"Clean record"} },
+    { id:"franchise",     label:"Franchise & permitting risk", sub:"State/local franchise, right-of-way",         map:{1:"Active disputes",2:"Pending issues",3:"Managed",4:"Stable",5:"Fully cleared"} },
+  ]},
+];
+
+const scores = {};
+DOMAINS.forEach(d => d.criteria.forEach(c => { scores[c.id] = 0; }));
+
+function domainAvg(d) {
+  const v = d.criteria.map(c => scores[c.id]).filter(x => x > 0);
+  return v.length ? v.reduce((a,b)=>a+b,0)/v.length : 0;
+}
+function calcOverall() {
+  let w=0,tw=0;
+  DOMAINS.forEach(d => { const a=domainAvg(d); if(a>0){w+=a*d.weight;tw+=d.weight;} });
+  return tw>0 ? w/tw : 0;
+}
+function totalCriteria() { return DOMAINS.reduce((a,d)=>a+d.criteria.length,0); }
+function countScored() { return Object.values(scores).filter(v=>v>0).length; }
+
+function setScore(cid, val) {
+  scores[cid] = val;
+  document.querySelectorAll(`[data-cid="${cid}"]`).forEach(btn => {
+    const bv = parseInt(btn.dataset.val);
+    btn.className = `score-btn b${bv}` + (bv===val?' sel':'');
+  });
+  const lbl = document.getElementById(`lbl-${cid}`);
+  if (lbl) {
+    const dom = DOMAINS.find(d=>d.criteria.find(c=>c.id===cid));
+    const cr = dom && dom.criteria.find(c=>c.id===cid);
+    if (val>0 && cr) {
+      lbl.textContent = cr.map[val];
+      lbl.style.cssText = `display:inline-block;background:${SC.bg[val]};color:${SC.txt[val]};`;
+    } else { lbl.style.display='none'; }
+  }
+  updateDomainPill(DOMAINS.find(d=>d.criteria.find(c=>c.id===cid)));
+  updateProgress();
+  updateBadge();
+}
+
+function updateDomainPill(dom) {
+  if (!dom) return;
+  const avg = domainAvg(dom);
+  const pill = document.getElementById(`dpill-${dom.id}`);
+  const bar  = document.getElementById(`dbar-${dom.id}`);
+  const sc = dom.criteria.filter(c=>scores[c.id]>0).length;
+  if (pill) {
+    if (avg>0) {
+      const bi = bandIdx(avg);
+      pill.style.cssText=`background:${SC.bg[bi]};color:${SC.txt[bi]};border-color:${SC.bdr[bi]};`;
+      pill.textContent = `${avg.toFixed(1)} — ${SC.lbl[bi]}  (${sc}/${dom.criteria.length})`;
+    } else {
+      pill.style.cssText='background:var(--surface2);color:var(--text3);border-color:var(--border);';
+      pill.textContent = `Not scored (0/${dom.criteria.length})`;
+    }
+  }
+  if (bar) { bar.style.width=(avg>0?(avg/5*100):0)+'%'; bar.style.background=avg>0?SC.solid[bandIdx(avg)]:''; }
+}
+
+function updateProgress() {
+  const sc=countScored(), tot=totalCriteria();
+  document.getElementById('prog-fill').style.width=Math.round(sc/tot*100)+'%';
+  document.getElementById('prog-label').textContent=`${sc} of ${tot} criteria scored`;
+}
+
+function updateBadge() {
+  const o=calcOverall();
+  const badge=document.getElementById('overall-badge');
+  if (!o) { badge.style.cssText=''; badge.textContent='Not scored'; return; }
+  const bi=bandIdx(o);
+  badge.style.cssText=`background:${SC.bg[bi]};color:${SC.txt[bi]};border-color:${SC.bdr[bi]};`;
+  badge.textContent=`${SC.lbl[bi]} — ${o.toFixed(2)}`;
+}
+
+function renderDomains() {
+  const c=document.getElementById('domains-container');
+  c.innerHTML='';
+  DOMAINS.forEach(dom => {
+    const crits = dom.criteria.map(cr => `
+      <div class="criterion-row">
+        <div>
+          <div class="criterion-label">${cr.label}</div>
+          <div class="criterion-sub">${cr.sub}</div>
+          <span class="criterion-selected-label" id="lbl-${cr.id}"></span>
+        </div>
+        <div class="score-col">
+          <div class="score-buttons">
+            ${[1,2,3,4,5].map(v=>`<button class="score-btn b${v}" data-cid="${cr.id}" data-val="${v}" onclick="setScore('${cr.id}',${v})">${v}</button>`).join('')}
+          </div>
+        </div>
+      </div>`).join('');
+    const div=document.createElement('div');
+    div.className='domain-card';
+    div.innerHTML=`
+      <div class="domain-header">
+        <div class="domain-name">${dom.name}</div>
+        <div class="domain-weight">Weight: ${Math.round(dom.weight*100)}%</div>
+      </div>
+      <div class="domain-score-row">
+        <div class="domain-bar-wrap"><div class="domain-bar-inner" id="dbar-${dom.id}"></div></div>
+        <div class="domain-score-pill" id="dpill-${dom.id}">Not scored (0/${dom.criteria.length})</div>
+      </div>
+      ${crits}`;
+    c.appendChild(div);
+  });
+}
+
+function renderSummary() {
+  const o=calcOverall(), sc=countScored(), tot=totalCriteria();
+  const bi=bandIdx(o);
+  const band=getBand(o);
+
+  document.getElementById('sum-metrics').innerHTML=`
+    <div class="metric-card">
+      <div class="metric-label">Overall score</div>
+      <div class="metric-value" style="color:${o?SC.solid[bi]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div>
+      <div class="metric-sub">out of 5.00</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Risk band</div>
+      <div class="metric-value" style="font-size:16px;margin-top:4px;color:${o?SC.solid[bi]:'var(--text3)'}">${o?band.label:'—'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Completion</div>
+      <div class="metric-value">${Math.round(sc/tot*100)}%</div>
+      <div class="metric-sub">${sc}/${tot} criteria</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Domains assessed</div>
+      <div class="metric-value">${DOMAINS.filter(d=>domainAvg(d)>0).length}/${DOMAINS.length}</div>
+    </div>`;
+
+  const sb=document.getElementById('sum-band');
+  sb.innerHTML = o ? `<div class="risk-band-block" style="background:${SC.bg[bi]};border-color:${SC.bdr[bi]}">
+    <div class="risk-band-dot" style="background:${SC.solid[bi]}"></div>
+    <div><div style="font-size:14px;font-weight:600;color:${SC.txt[bi]}">${band.label}</div>
+    <div style="font-size:12px;color:${SC.txt[bi]};opacity:0.8;margin-top:2px">${band.desc}</div></div>
+  </div>` : '';
+
+  document.getElementById('sum-bars').innerHTML = DOMAINS.map(d => {
+    const ds=domainAvg(d), dbi=bandIdx(ds);
+    return `<div class="dbar-row">
+      <div class="dbar-label">${d.name}</div>
+      <div class="dbar-track"><div class="dbar-fill" style="width:${ds?ds/5*100:0}%;background:${ds?SC.solid[dbi]:''}"></div></div>
+      <div class="dbar-score" style="color:${ds?SC.solid[dbi]:'var(--text3)'}">${ds?ds.toFixed(1):'—'}</div>
+    </div>`;
+  }).join('');
+
+  const findings=[];
+  DOMAINS.forEach(d=>d.criteria.forEach(c=>{
+    const s=scores[c.id];
+    if(s>0&&s<=3) findings.push({sev:s===1?'c':s===2?'h':'m',label:c.label,domain:d.name,score:s,map:c.map[s]});
+  }));
+  findings.sort((a,b)=>a.score-b.score);
+  document.getElementById('sum-findings').innerHTML = findings.length
+    ? findings.slice(0,10).map(f=>`<li class="finding-item">
+        <span class="sev-badge sev-${f.sev}">${f.sev==='c'?'CRITICAL':f.sev==='h'?'HIGH':'MEDIUM'}</span>
+        <span><strong>${f.label}</strong> &mdash; ${f.map} <span style="color:var(--text3);font-size:11px">(${f.domain})</span></span>
+      </li>`).join('')
+    : '<li style="padding:8px 0;color:var(--text3);font-size:13px">No findings yet — score criteria to surface gaps.</li>';
+}
+
+function updateExec() { if(document.getElementById('tab-exec').classList.contains('active')) renderExec(); }
+
+function renderExec() {
+  const o=calcOverall(), bi=bandIdx(o), band=getBand(o);
+  const company=document.getElementById('company-name').value||'[Company Name]';
+  const assessor=document.getElementById('assessor-name').value||'[Assessor]';
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  const findings=[];
+  DOMAINS.forEach(d=>d.criteria.forEach(c=>{
+    const s=scores[c.id];
+    if(s>0&&s<=3) findings.push({sev:s===1?'CRITICAL':s===2?'HIGH':'MEDIUM',label:c.label,domain:d.name,score:s,desc:c.map[s],sub:c.sub});
+  }));
+  findings.sort((a,b)=>a.score-b.score);
+
+  const domainDetail = DOMAINS.map(d => {
+    const ds=domainAvg(d), dbi=bandIdx(ds);
+    const rows=d.criteria.map(c=>{
+      const s=scores[c.id];
+      const chip = s ? `<span class="score-chip" style="background:${SC.solid[s]};color:${s===3?'#3a3000':'#fff'};border-color:${SC.bdr[s]}">${s}</span>` : `<span class="score-chip" style="background:var(--surface2);color:var(--text3)">—</span>`;
+      return `<tr>
+        <td>${c.label}<br><span style="font-size:11px;color:var(--text3)">${c.sub}</span></td>
+        <td style="text-align:center">${chip}</td>
+        <td style="color:${s?SC.txt[bandIdx(s)]:'var(--text3)'};">${s?c.map[s]:'—'}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="exec-domain-detail">
+      <h2>${d.name} &nbsp;<span style="font-size:13px;font-weight:400;color:${ds?SC.solid[dbi]:'var(--text3)'}">${ds?`Score: ${ds.toFixed(1)} — ${SC.lbl[dbi]}`:''}</span></h2>
+      <table class="exec-crit-table">
+        <thead><tr><th>Criterion</th><th style="width:50px;text-align:center">Score</th><th style="width:200px">Rating</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('exec-content').innerHTML=`
+    <div class="exec-header">
+      <h1>Infrastructure Risk Assessment</h1>
+      <p>${company}</p>
+      <div class="exec-meta">
+        <div class="exec-meta-item"><strong>Date:</strong> ${now}</div>
+        <div class="exec-meta-item"><strong>Assessor:</strong> ${assessor}</div>
+        <div class="exec-meta-item"><strong>Completion:</strong> ${countScored()}/${totalCriteria()} criteria</div>
+      </div>
+    </div>
+
+    <div class="exec-scorecard">
+      <div class="exec-overall" style="background:${o?SC.bg[bi]:'var(--surface2)'};border-color:${o?SC.bdr[bi]:'var(--border)'}">
+        <div class="big-score" style="color:${o?SC.solid[bi]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div>
+        <div class="band-label" style="color:${o?SC.txt[bi]:'var(--text3)'}">${o?band.label:'Not scored'}</div>
+        <div class="band-desc">${o?band.desc:'Complete scoring to generate results.'}</div>
+      </div>
+      <div class="exec-domains">
+        <h3>Domain scores</h3>
+        ${DOMAINS.map(d=>{
+          const ds=domainAvg(d),dbi=bandIdx(ds);
+          return `<div class="dbar-row" style="margin-bottom:8px">
+            <div class="dbar-label">${d.name}</div>
+            <div class="dbar-track"><div class="dbar-fill" style="width:${ds?ds/5*100:0}%;background:${ds?SC.solid[dbi]:''}"></div></div>
+            <div class="dbar-score" style="color:${ds?SC.solid[dbi]:'var(--text3)'}">${ds?ds.toFixed(1):'—'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${findings.length ? `<div class="exec-findings">
+      <h2>Prioritized findings (${findings.length} items requiring attention)</h2>
+      ${findings.map((f,i)=>`<div class="exec-finding-card" style="border-left:3px solid ${f.score===1?SC.solid[1]:f.score===2?SC.solid[2]:SC.solid[3]}">
+        <div class="exec-finding-header">
+          <span class="sev-badge sev-${f.score===1?'c':f.score===2?'h':'m'}" style="font-size:11px">${f.sev}</span>
+          <div>
+            <div class="exec-finding-title">${f.label}</div>
+            <div class="exec-finding-domain">${f.domain}</div>
+          </div>
+        </div>
+        <div class="exec-finding-row"><span class="exec-finding-key">Current:</span><span style="color:${SC.txt[f.score]}">${f.desc}</span></div>
+        <div class="exec-finding-row"><span class="exec-finding-key">Scope:</span><span style="color:var(--text2)">${f.sub}</span></div>
+      </div>`).join('')}
+    </div>` : ''}
+
+    ${domainDetail}
+  `;
+}
+
+// ── JSON Export / Import ──
+function buildJSONPayload() {
+  return {
+    schema_version: "1.0",
+    tool: "telecom-risk-corporate",
+    company: document.getElementById('company-name').value,
+    assessor: document.getElementById('assessor-name').value,
+    assessment_date: new Date().toISOString(),
+    overall_score: parseFloat(calcOverall().toFixed(4)),
+    risk_band: getBand(calcOverall())?.label || null,
+    completion: { scored: countScored(), total: totalCriteria() },
+    domain_scores: DOMAINS.map(d => ({
+      domain_id: d.id,
+      domain_name: d.name,
+      weight: d.weight,
+      domain_avg: parseFloat(domainAvg(d).toFixed(4)),
+      criteria: d.criteria.map(c => ({
+        id: c.id,
+        label: c.label,
+        score: scores[c.id],
+        rating: scores[c.id] ? c.map[scores[c.id]] : null
+      }))
+    }))
+  };
+}
+
+function generateJSON() {
+  document.getElementById('json-out').value = JSON.stringify(buildJSONPayload(), null, 2);
+}
+
+function copyJSON() {
+  generateJSON();
+  navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});
+  const btn = event.target; btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy to clipboard',1500);
+}
+
+function downloadJSON() {
+  const payload = buildJSONPayload();
+  const company = (payload.company||'assessment').replace(/\s+/g,'-').toLowerCase();
+  const date = new Date().toISOString().slice(0,10);
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`telecom-risk-${company}-${date}.json`; a.click();
+}
+
+function applyJSON(data) {
+  try {
+    if (data.company) document.getElementById('company-name').value=data.company;
+    if (data.assessor) document.getElementById('assessor-name').value=data.assessor;
+    data.domain_scores.forEach(ds => {
+      ds.criteria.forEach(c => {
+        if (c.score && c.score > 0) setScore(c.id, c.score);
+      });
+    });
+    updateProgress(); updateBadge();
+    DOMAINS.forEach(d=>updateDomainPill(d));
+    document.getElementById('load-status').style.color='#2E5E10';
+    document.getElementById('load-status').textContent=`✓ Loaded: ${data.company||'Assessment'} — ${data.assessment_date?new Date(data.assessment_date).toLocaleDateString():''}`;
+    switchTab('score');
+  } catch(e) {
+    document.getElementById('load-status').style.color='#791F1F';
+    document.getElementById('load-status').textContent='Error applying JSON: '+e.message;
+  }
+}
+
+function loadFromPaste() {
+  try {
+    const data=JSON.parse(document.getElementById('json-in').value);
+    applyJSON(data);
+  } catch(e) {
+    document.getElementById('load-status').style.color='#791F1F';
+    document.getElementById('load-status').textContent='Invalid JSON: '+e.message;
+  }
+}
+
+function loadFromFile(evt) {
+  const file=evt.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{ try { applyJSON(JSON.parse(e.target.result)); } catch(err) {
+    document.getElementById('load-status').style.color='#791F1F';
+    document.getElementById('load-status').textContent='Error reading file: '+err.message;
+  }};
+  reader.readAsText(file);
+}
+
+function resetAll() {
+  if (!confirm('Reset all scores? This cannot be undone.')) return;
+  DOMAINS.forEach(d=>d.criteria.forEach(c=>{ scores[c.id]=0; }));
+  renderDomains();
+  updateProgress(); updateBadge();
+  document.getElementById('company-name').value='';
+  document.getElementById('assessor-name').value='';
+}
+
+// ── TABS ──
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));
+  if(t==='summary') renderSummary();
+  if(t==='exec') renderExec();
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab=e.target.closest('.tab'); if(!tab) return;
+  switchTab(tab.dataset.tab);
+});
+
+renderDomains();
+</script>
+</body>
+</html>

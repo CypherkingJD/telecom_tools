@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Equipment Evaluation</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f4f5f7;--surface:#fff;--surface2:#ecedf1;--border:#dcdee6;--border2:#b0b4c4;
+  --text:#13141e;--text2:#464858;--text3:#8286a0;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Consolas','Courier New',monospace;
+  --radius:10px;--radius-sm:6px;
+  --mode-new:#0369a1;--mode-new-bg:#f0f9ff;--mode-new-bdr:#7dd3fc;
+  --mode-card:#0891b2;--mode-card-bg:#ecfeff;--mode-card-bdr:#67e8f9;
+  --mode-rfp:#7c3aed;--mode-rfp-bg:#f5f3ff;--mode-rfp-bdr:#c4b5fd;
+  --mode-eol:#dc2626;--mode-eol-bg:#fef2f2;--mode-eol-bdr:#fca5a5;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+
+/* score colors */
+.b1{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+.b2{background:#FFF0E0;color:#7A3B00;border-color:#F5B96A;}
+.b3{background:#FEFCE0;color:#6B5A00;border-color:#E8D840;}
+.b4{background:#EDFAE0;color:#2E5E10;border-color:#A3D460;}
+.b5{background:#E0FAE8;color:#0A4E28;border-color:#3DC87A;}
+.b1.sel{background:#E24B4A;color:#fff;border-color:#A32D2D;box-shadow:0 0 0 3px #F0959550;}
+.b2.sel{background:#F5851A;color:#fff;border-color:#7A3B00;box-shadow:0 0 0 3px #F5B96A50;}
+.b3.sel{background:#D4C000;color:#3a3000;border-color:#6B5A00;box-shadow:0 0 0 3px #E8D84050;}
+.b4.sel{background:#6DB82A;color:#fff;border-color:#2E5E10;box-shadow:0 0 0 3px #A3D46050;}
+.b5.sel{background:#1AC866;color:#fff;border-color:#0A4E28;box-shadow:0 0 0 3px #3DC87A50;}
+
+/* EOL urgency colors (1=low urgency, 5=critical) */
+.e1{background:#E0FAE8;color:#0A4E28;border-color:#3DC87A;}
+.e2{background:#EDFAE0;color:#2E5E10;border-color:#A3D460;}
+.e3{background:#FEFCE0;color:#6B5A00;border-color:#E8D840;}
+.e4{background:#FFF0E0;color:#7A3B00;border-color:#F5B96A;}
+.e5{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+.e1.sel{background:#1AC866;color:#fff;border-color:#0A4E28;box-shadow:0 0 0 3px #3DC87A50;}
+.e2.sel{background:#6DB82A;color:#fff;border-color:#2E5E10;box-shadow:0 0 0 3px #A3D46050;}
+.e3.sel{background:#D4C000;color:#3a3000;border-color:#6B5A00;box-shadow:0 0 0 3px #E8D84050;}
+.e4.sel{background:#F5851A;color:#fff;border-color:#7A3B00;box-shadow:0 0 0 3px #F5B96A50;}
+.e5.sel{background:#E24B4A;color:#fff;border-color:#A32D2D;box-shadow:0 0 0 3px #F0959550;}
+
+#app{max-width:1020px;margin:0 auto;padding:24px 16px;}
+
+/* MODE SCREEN */
+#mode-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+#mode-screen.hidden{display:none;}
+.mode-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px 32px;max-width:580px;width:100%;}
+.mode-card h2{font-size:18px;font-weight:600;margin-bottom:4px;}
+.mode-card>p{font-size:12px;color:var(--text3);margin-bottom:20px;}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.mode-opt{padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
+.mode-opt:hover{border-color:var(--border2);}
+.mode-opt.active-new{border-color:var(--mode-new);background:var(--mode-new-bg);}
+.mode-opt.active-card{border-color:var(--mode-card);background:var(--mode-card-bg);}
+.mode-opt.active-rfp{border-color:var(--mode-rfp);background:var(--mode-rfp-bg);}
+.mode-opt.active-eol{border-color:var(--mode-eol);background:var(--mode-eol-bg);}
+.mode-opt-icon{font-size:22px;margin-bottom:6px;}
+.mode-opt-title{font-size:13px;font-weight:600;margin-bottom:2px;}
+.mode-opt-desc{font-size:11px;color:var(--text3);line-height:1.4;}
+.mode-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.mode-fields label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:3px;display:block;}
+.mode-fields input,.mode-fields select,.mode-fields textarea{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);font-family:var(--font);}
+.mode-fields textarea{resize:none;min-height:52px;}
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.start-btn{width:100%;padding:11px;font-size:13px;font-weight:600;border:none;border-radius:var(--radius-sm);color:#fff;cursor:pointer;transition:opacity .15s;}
+.start-btn:hover{opacity:.88;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.title-block h1{font-size:19px;font-weight:600;}
+.title-block p{font-size:12px;color:var(--text3);margin-top:2px;}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;}
+.btn{padding:7px 13px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:#13141e;color:#fff;border-color:#13141e;}
+.btn-primary:hover{background:#2a2c3e;}
+.btn-danger{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+
+.mode-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:20px;margin-bottom:13px;border:1.5px solid;}
+.mode-badge .dot{width:9px;height:9px;border-radius:50%;}
+.mode-badge span{font-size:12px;font-weight:600;letter-spacing:.04em;}
+#overall-badge{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;background:var(--surface2);color:var(--text3);border:1.5px solid var(--border);white-space:nowrap;}
+
+/* META */
+.meta-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;}
+.meta-panel h3{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+.meta-grid label{font-size:11px;font-weight:500;color:var(--text2);display:block;margin-bottom:3px;}
+.meta-grid input,.meta-grid select,.meta-grid textarea{width:100%;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);font-family:var(--font);}
+.meta-grid textarea{resize:none;min-height:48px;}
+
+/* PROGRESS */
+.progress-wrap{margin-bottom:12px;}
+.progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;transition:width .3s;}
+.progress-label{font-size:11px;color:var(--text3);margin-top:3px;}
+
+/* LEGEND */
+.legend{display:flex;gap:11px;margin-bottom:12px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.legend-dot{width:9px;height:9px;border-radius:50%;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.tab{padding:8px 15px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab.active{color:var(--text);font-weight:500;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* WEIGHTS PANEL */
+.weights-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;}
+.weights-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.weights-panel-hdr h3{font-size:13px;font-weight:600;}
+.weight-total{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;}
+.wt-ok{background:#E0FAE8;color:#0A4E28;}
+.wt-warn{background:#FCEBEB;color:#791F1F;}
+.weight-rows{display:flex;flex-direction:column;gap:10px;}
+.weight-row{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:2px 10px;align-items:center;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;}
+.weight-lbl{font-size:12px;color:var(--text2);font-weight:500;grid-column:1;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.weight-val{font-size:13px;font-weight:700;min-width:42px;text-align:right;color:var(--text);grid-column:2;grid-row:1 / span 2;}
+.weight-slider{grid-column:1;grid-row:2;width:100%;accent-color:var(--mode-accent,#0369a1);margin:0;}
+.weight-reset{font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;margin-left:4px;}
+
+/* CATEGORY CARDS */
+.cat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.cat-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;gap:10px;}
+.cat-header:hover{background:var(--surface2);}
+.cat-left{display:flex;align-items:center;gap:9px;}
+.cat-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--surface2);flex-shrink:0;}
+.cat-name{font-size:13px;font-weight:600;}
+.cat-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.cat-right{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.cat-bar-wrap{width:80px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.cat-bar-inner{height:100%;border-radius:3px;transition:width .3s;width:0%;}
+.cat-pill{font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text3);white-space:nowrap;min-width:100px;text-align:center;}
+.chevron{font-size:10px;color:var(--text3);transition:transform .2s;}.chevron.open{transform:rotate(90deg);}
+.cat-body{border-top:1px solid var(--border);padding:4px 16px 14px;display:none;}.cat-body.open{display:block;}
+
+/* CRITERIA ROWS */
+.crit-section-lbl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 5px;padding-bottom:5px;border-bottom:1px dashed var(--border2);}
+.crit-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--border);}
+.crit-label{font-size:13px;font-weight:500;}
+.crit-sub{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;}
+.crit-sel-lbl{display:none;font-size:11px;font-weight:500;margin-top:4px;padding:2px 7px;border-radius:4px;}
+.crit-note-toggle{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;margin-top:3px;}
+.crit-note{width:100%;margin-top:5px;padding:5px 8px;font-size:11px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:none;min-height:38px;display:none;}
+.crit-note.vis{display:block;}
+.score-col{display:flex;flex-direction:column;align-items:flex-end;}
+.score-buttons{display:flex;gap:4px;}
+.score-btn{width:31px;height:31px;border-radius:var(--radius-sm);border:1.5px solid transparent;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:transform .1s;}
+.score-btn:active{transform:scale(.91);}
+
+/* RFP DEVICE COLUMNS */
+.rfp-devices-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.device-tab{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:500;cursor:pointer;background:var(--surface2);color:var(--text3);}
+.device-tab.active{border-color:var(--mode-rfp);background:var(--mode-rfp-bg);color:var(--mode-rfp);}
+.device-name-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.device-name-row input{padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);}
+
+/* SUMMARY */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+.sum-mc{background:var(--surface2);border-radius:var(--radius-sm);padding:11px 13px;}
+.sum-lbl{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.sum-val{font-size:22px;font-weight:600;}
+.sum-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.gonogo-box{border-radius:var(--radius);border:2px solid;padding:16px 20px;margin-bottom:14px;display:flex;align-items:center;gap:14px;}
+.gonogo-verdict{font-size:28px;font-weight:700;}
+.gonogo-desc{font-size:13px;margin-top:3px;}
+.cat-bars-section h3{font-size:13px;font-weight:600;margin-bottom:9px;}
+.dbar-row{display:grid;grid-template-columns:200px 1fr 42px;gap:10px;align-items:center;margin-bottom:7px;}
+.dbar-lbl{font-size:12px;color:var(--text2);}
+.dbar-track{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:4px;transition:width .3s;}
+.dbar-sc{font-size:12px;font-weight:600;text-align:right;}
+.findings-list{list-style:none;}
+.fi{display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);font-size:13px;align-items:flex-start;}
+.sev{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;letter-spacing:.03em;}
+.sev-c{background:#FCEBEB;color:#791F1F;}.sev-h{background:#FFF0E0;color:#7A3B00;}.sev-m{background:#FEFCE0;color:#6B5A00;}
+
+/* RFP COMPARISON */
+.rfp-compare-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.rfp-compare-table th{padding:8px 10px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);text-align:left;}
+.rfp-compare-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.rfp-rank{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;background:var(--surface2);color:var(--text3);}
+.rfp-rank.r1{background:#D4C000;color:#3a3000;}
+.rfp-rank.r2{background:#B4B2A9;color:#2C2C2A;}
+.rfp-rank.r3{background:#F5C4B3;color:#4A1B0C;}
+.chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:4px;font-size:11px;font-weight:700;}
+
+/* EOL QUEUE */
+.eol-queue{margin-top:14px;}
+.eol-queue h3{font-size:13px;font-weight:600;margin-bottom:10px;}
+.eol-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);margin-bottom:8px;}
+.eol-urgency-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.eol-item-name{font-size:13px;font-weight:600;flex:1;}
+.eol-item-score{font-size:20px;font-weight:700;}
+
+/* EXEC / PRINT */
+.exec-hdr{text-align:center;padding:24px 0 18px;border-bottom:2px solid var(--border);margin-bottom:20px;}
+.exec-hdr h1{font-size:21px;font-weight:700;}
+.exec-hdr h2{font-size:13px;color:var(--text2);margin-top:3px;}
+.exec-badge{display:inline-block;margin-top:10px;padding:4px 16px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;}
+.exec-meta{display:flex;gap:18px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.exec-meta span{font-size:12px;color:var(--text2);}
+.exec-scorecard{display:grid;grid-template-columns:1fr 1.5fr;gap:18px;margin-bottom:20px;}
+.exec-overall{padding:20px;border-radius:var(--radius);border:2px solid;text-align:center;}
+.exec-big{font-size:52px;font-weight:700;line-height:1;}
+.exec-band{font-size:14px;font-weight:600;margin-top:5px;}
+.exec-desc{font-size:12px;color:var(--text2);margin-top:5px;}
+.exec-cats{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;}
+.exec-cats h3{font-size:13px;font-weight:600;margin-bottom:10px;}
+.exec-findings{margin-bottom:20px;}
+.exec-findings h2{font-size:15px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.efc{border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:8px;break-inside:avoid;}
+.exec-detail{margin-bottom:20px;break-inside:avoid;}
+.exec-detail h2{font-size:15px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.etbl{width:100%;border-collapse:collapse;font-size:12px;}
+.etbl th{text-align:left;padding:5px 9px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);}
+.etbl td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:top;}
+
+/* JSON IO */
+.json-area{width:100%;height:220px;font-family:var(--mono);font-size:11px;padding:10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:vertical;}
+.json-actions{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.load-section{margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+.load-section h3{font-size:13px;font-weight:600;margin-bottom:7px;}
+.file-drop{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:16px;text-align:center;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:8px;}
+.file-drop:hover{border-color:var(--border2);background:var(--surface2);}
+#fi-load{display:none;}
+
+@media print{
+  body{background:#fff;font-size:12px;}
+  #app{padding:0;max-width:100%;}
+  .topbar .toolbar,.tabs,.tab-panel:not(#tab-exec),#mode-screen{display:none!important;}
+  #tab-exec{display:block!important;}
+  .cat-card{break-inside:avoid;}
+  .score-btn,.chip{print-color-adjust:exact;-webkit-print-color-adjust:exact;}
+}
+@media(max-width:640px){
+  .mode-grid{grid-template-columns:1fr;}
+  .exec-scorecard{grid-template-columns:1fr;}
+  .dbar-row{grid-template-columns:130px 1fr 34px;}
+}
+</style>
+</head>
+<body>
+
+<!-- MODE SCREEN -->
+<div id="mode-screen">
+  <div class="mode-card">
+    <h2>Network Equipment Evaluation</h2>
+    <p>Select evaluation type, then complete the equipment details to begin.</p>
+    <div class="mode-grid">
+      <div class="mode-opt" id="mopt-new" onclick="selectMode('new')">
+        <div class="mode-opt-icon">🔌</div>
+        <div class="mode-opt-title">New Equipment</div>
+        <div class="mode-opt-desc">Routers, switches, firewalls — lab or field evaluation before/after deployment</div>
+      </div>
+      <div class="mode-opt" id="mopt-card" onclick="selectMode('card')">
+        <div class="mode-opt-icon">🃏</div>
+        <div class="mode-opt-title">Cards & Firmware</div>
+        <div class="mode-opt-desc">Line cards, supervisor modules, software/firmware upgrades</div>
+      </div>
+      <div class="mode-opt" id="mopt-rfp" onclick="selectMode('rfp')">
+        <div class="mode-opt-icon">📊</div>
+        <div class="mode-opt-title">Vendor / RFP Comparison</div>
+        <div class="mode-opt-desc">Side-by-side evaluation of up to 3 competing products for procurement</div>
+      </div>
+      <div class="mode-opt" id="mopt-eol" onclick="selectMode('eol')">
+        <div class="mode-opt-icon">⚠️</div>
+        <div class="mode-opt-title">EOL / Legacy Assessment</div>
+        <div class="mode-opt-desc">End-of-life risk scoring and replacement urgency prioritization</div>
+      </div>
+    </div>
+    <div class="mode-fields">
+      <div class="mode-row">
+        <div><label>Equipment name / model</label><input type="text" id="ms-name" placeholder="e.g. Cisco Catalyst 9300"></div>
+        <div><label>Vendor</label><input type="text" id="ms-vendor" placeholder="e.g. Cisco"></div>
+      </div>
+      <div class="mode-row">
+        <div><label>Evaluator</label><input type="text" id="ms-evaluator" placeholder="Your name"></div>
+        <div><label>Environment</label>
+          <select id="ms-env">
+            <option value="">Select...</option>
+            <option>ISP / Carrier Network Ops</option>
+            <option>Enterprise IT / Campus Network</option>
+            <option>Managed Services Provider (MSP)</option>
+            <option>Telecom / Wireless Carrier (Cell, CBRS, Private LTE)</option>
+            <option>Data Center Operations</option>
+            <option>Cloud / Hybrid Infrastructure</option>
+          </select>
+        </div>
+      </div>
+      <div class="mode-row">
+        <div><label>Evaluation phase</label>
+          <select id="ms-phase">
+            <option value="lab">Lab / Pre-deployment</option>
+            <option value="field">Field / Post-deployment</option>
+            <option value="procurement">Procurement / RFP</option>
+            <option value="eol">EOL / Legacy review</option>
+          </select>
+        </div>
+        <div><label>Approval audience</label>
+          <select id="ms-audience">
+            <option value="">Select or type below...</option>
+            <option>Architecture Review Board (ARB)</option>
+            <option>Change Advisory Board (CAB)</option>
+            <option>Procurement / Finance Committee</option>
+            <option>Network Engineering Sign-off</option>
+            <option>Executive / C-Suite</option>
+            <option>Customer / Client</option>
+          </select>
+        </div>
+      </div>
+      <div><label>Additional notes / context</label><textarea id="ms-notes" placeholder="Deployment context, requirements, constraints..." rows="2"></textarea></div>
+    </div>
+    <button class="start-btn" id="start-btn" onclick="startEvaluation()" style="background:#0369a1">Begin evaluation</button>
+  </div>
+</div>
+
+<div id="app">
+  <div id="mode-badge-wrap"></div>
+  <div class="topbar">
+    <div class="title-block">
+      <h1 id="app-title">Network Equipment Evaluation</h1>
+      <p id="app-sub">Configure evaluation to begin</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div id="overall-badge">Not scored</div>
+      <div class="toolbar">
+        <button class="btn" onclick="switchTab('exec')">📋 Report</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+        <button class="btn" onclick="exportEval()">↓ Export JSON</button>
+        <button class="btn btn-danger" onclick="resetAll()">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-panel" id="meta-panel" style="display:none">
+    <h3>Evaluation details</h3>
+    <div class="meta-grid" id="meta-fields"></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 criteria scored</div>
+  </div>
+
+  <div class="legend" id="legend-wrap"></div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="score">Scoring</button>
+    <button class="tab" data-tab="weights">Weights</button>
+    <button class="tab" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="exec">Report</button>
+    <button class="tab" data-tab="io">Export / Import</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-score">
+    <div id="rfp-device-bar" style="display:none">
+      <div class="rfp-devices-bar" id="rfp-tabs"></div>
+      <div class="device-name-row" id="rfp-name-row"></div>
+    </div>
+    <div id="cats-container"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-weights">
+    <div class="weights-panel">
+      <div class="weights-panel-hdr">
+        <h3>Category weights</h3>
+        <div class="weight-total" id="wt-total">Total: 100%</div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Adjust how much each category contributes to the composite score. Total must equal 100%.</p>
+      <div class="weight-rows" id="weight-rows"></div>
+      <div style="margin-top:10px;text-align:right"><button class="btn" onclick="resetWeights()">Reset to defaults</button></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-summary">
+    <div class="sum-grid" id="sum-metrics"></div>
+    <div id="gonogo-wrap"></div>
+    <div class="cat-bars-section"><h3 id="sum-bars-title">Category breakdown</h3><div id="sum-bars"></div></div>
+    <div id="rfp-compare-wrap" style="display:none">
+      <h3 style="font-size:13px;font-weight:600;margin-bottom:10px">Device comparison</h3>
+      <div id="rfp-compare-table-wrap"></div>
+    </div>
+    <div id="eol-queue-wrap" style="display:none"></div>
+    <div style="margin-top:14px"><h3 style="font-size:13px;font-weight:600;margin-bottom:9px">Key findings</h3><ul class="findings-list" id="sum-findings"></ul></div>
+  </div>
+
+  <div class="tab-panel" id="tab-exec"><div id="exec-content"></div></div>
+
+  <div class="tab-panel" id="tab-io">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px">Export evaluation as JSON</h3>
+    <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+    <div class="json-actions">
+      <button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button>
+      <button class="btn" onclick="copyJSON()">Copy to clipboard</button>
+      <button class="btn" onclick="downloadJSON()">↓ Download .json</button>
+    </div>
+    <div class="load-section">
+      <h3>Load saved evaluation</h3>
+      <div class="file-drop" onclick="document.getElementById('fi-load').click()">Click to load a saved evaluation JSON<input type="file" id="fi-load" accept=".json" onchange="loadFromFile(event)"></div>
+      <div id="load-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SCORE COLOR SYSTEM ──
+const SC={
+  solid:["","#E24B4A","#F5851A","#D4C000","#6DB82A","#1AC866"],
+  bg:   ["","#FCEBEB","#FFF0E0","#FEFCE0","#EDFAE0","#E0FAE8"],
+  bdr:  ["","#F09595","#F5B96A","#E8D840","#A3D460","#3DC87A"],
+  txt:  ["","#791F1F","#7A3B00","#6B5A00","#2E5E10","#0A4E28"],
+};
+// EOL is inverted (5 = critical urgency = red)
+const EOL_SC={
+  solid:["","#1AC866","#6DB82A","#D4C000","#F5851A","#E24B4A"],
+  bg:   ["","#E0FAE8","#EDFAE0","#FEFCE0","#FFF0E0","#FCEBEB"],
+  bdr:  ["","#3DC87A","#A3D460","#E8D840","#F5B96A","#F09595"],
+  txt:  ["","#0A4E28","#2E5E10","#6B5A00","#7A3B00","#791F1F"],
+};
+
+const MODE_CFG={
+  new: {color:'#0369a1',bg:'#f0f9ff',bdr:'#7dd3fc',label:'New Equipment Evaluation',accentVar:'--mode-new'},
+  card:{color:'#0891b2',bg:'#ecfeff',bdr:'#67e8f9',label:'Cards & Firmware Evaluation',accentVar:'--mode-card'},
+  rfp: {color:'#7c3aed',bg:'#f5f3ff',bdr:'#c4b5fd',label:'Vendor / RFP Comparison',accentVar:'--mode-rfp'},
+  eol: {color:'#dc2626',bg:'#fef2f2',bdr:'#fca5a5',label:'EOL / Legacy Assessment',accentVar:'--mode-eol'},
+};
+
+// ── CATEGORY DEFINITIONS ──
+const CATS_NEW=[
+  {id:"perf",name:"Technical Performance",icon:"⚡",sub:"Throughput, latency, capacity, and benchmark results",weight:20,criteria:[
+    {id:"n_throughput",lbl:"Throughput vs. rated spec",       sub:"Measured throughput meets or exceeds vendor-rated performance under test load",map:{1:"<50% of spec",2:"50–75% of spec",3:"75–90% of spec",4:"90–100% of spec",5:"Exceeds spec; consistent under load"}},
+    {id:"n_latency",   lbl:"Latency / forwarding delay",      sub:"Measured forwarding latency acceptable for use-case requirements",           map:{1:"Unacceptable latency",2:"Marginal",3:"Meets requirements",4:"Below requirement",5:"Best-in-class for platform class"}},
+    {id:"n_capacity",  lbl:"Table capacity (MAC/route/ARP)",  sub:"FIB, MAC, ARP, BGP table sizes sufficient for deployment scale",            map:{1:"Insufficient for use case",2:"Barely sufficient",3:"Adequate with headroom",4:"Well above requirement",5:"Exceeds 2x requirement"}},
+    {id:"n_scale",     lbl:"Scale / stress test results",     sub:"Performance under maximum load, convergence events, and table saturation",   map:{1:"Fails under stress",2:"Degrades significantly",3:"Acceptable degradation",4:"Stable under stress",5:"No degradation; predictable behavior"}},
+  ]},
+  {id:"proto",name:"Protocol Conformance",icon:"📡",sub:"Standards compliance and interoperability with existing infrastructure",weight:20,criteria:[
+    {id:"n_rfc",       lbl:"RFC / standards compliance",      sub:"Protocol behavior conforms to applicable RFCs and IEEE standards",          map:{1:"Multiple non-conformances",2:"Minor non-conformances",3:"Mostly conformant",4:"Fully conformant",5:"Conformant + extended capabilities"}},
+    {id:"n_interop",   lbl:"Interoperability with existing",  sub:"Operates correctly with incumbent vendor platforms in the environment",      map:{1:"Major interop failures",2:"Significant issues",3:"Works with caveats",4:"Full interop confirmed",5:"Seamless; no configuration workarounds required"}},
+    {id:"n_featurep",  lbl:"Feature parity with requirement", sub:"All required protocol features present (BGP, OSPF, MPLS, QoS, etc.)",       map:{1:"Major feature gaps",2:"Notable gaps",3:"Core features present",4:"Full feature parity",5:"Feature parity + additional capabilities"}},
+    {id:"n_l2l3",      lbl:"L2/L3 feature completeness",     sub:"STP, VLAN, LACP, routing protocols — all required functions operate correctly",map:{1:"Multiple feature failures",2:"Some L2/L3 gaps",3:"Core functions work",4:"All tested features pass",5:"All features pass + edge cases validated"}},
+  ]},
+  {id:"phys",name:"Physical & Environmental Fit",icon:"🗄️",sub:"Form factor, power, cooling, and physical deployment requirements",weight:10,criteria:[
+    {id:"n_formfactor",lbl:"Form factor / rack compatibility",sub:"Physical dimensions fit target rack space; rail kit and cable management adequate",map:{1:"Does not fit",2:"Fits with significant modification",3:"Fits with minor modification",4:"Direct fit",5:"Direct fit + improved density"}},
+    {id:"n_power",     lbl:"Power draw & efficiency",         sub:"Power consumption within budget; PSU redundancy and efficiency rating",      map:{1:"Exceeds power budget",2:"At power limit",3:"Within budget with margin",4:"Efficient; well within budget",5:"Best-in-class efficiency for tier"}},
+    {id:"n_cooling",   lbl:"Thermal / cooling requirements",  sub:"Airflow direction, BTU output, and operating temp range fit deployment site", map:{1:"Cooling requirements not met",2:"Marginal fit",3:"Meets requirements",4:"Good thermal performance",5:"Exceeds thermal specs; passive cooling capable"}},
+  ]},
+  {id:"mgmt",name:"Manageability & Operability",icon:"🖥️",sub:"CLI, APIs, telemetry, monitoring integration, and day-2 operability",weight:15,criteria:[
+    {id:"n_cli",       lbl:"CLI familiarity & usability",     sub:"CLI syntax familiar to ops team; learning curve acceptable; help system quality",map:{1:"Completely unfamiliar CLI",2:"Significant retraining required",3:"Moderate learning curve",4:"Familiar with minor differences",5:"Same or superior CLI to incumbent"}},
+    {id:"n_api",       lbl:"API / automation support",        sub:"NETCONF, RESTCONF, gRPC, or equivalent API coverage for automation use cases",map:{1:"No API support",2:"Limited/proprietary API",3:"REST API present",4:"NETCONF/RESTCONF + streaming telemetry",5:"Full automation stack; open standards"}},
+    {id:"n_nms",       lbl:"NMS / monitoring integration",    sub:"Integrates with existing monitoring (SNMP MIBs, syslog, streaming telemetry)", map:{1:"No standard monitoring support",2:"SNMP only, limited MIBs",3:"Full SNMP + syslog",4:"SNMP + syslog + streaming telemetry",5:"Native integration with incumbent NMS"}},
+    {id:"n_ztp",       lbl:"Zero-touch provisioning",         sub:"ZTP, PnP, or equivalent for rapid deployment at scale",                      map:{1:"No ZTP support",2:"Proprietary ZTP only",3:"Basic ZTP/PnP",4:"Full ZTP with template support",5:"ZTP + pipeline integration + rollback"}},
+  ]},
+  {id:"sw",name:"Software Maturity",icon:"💾",sub:"Code train stability, bug exposure, patch cadence, and known issues",weight:15,criteria:[
+    {id:"n_codeage",   lbl:"Software release maturity",       sub:"Code version age; time in GA; known defect list reviewed",                  map:{1:"Beta or first GA release",2:"Early GA; significant bug list",3:"Established GA with known issues",4:"Mature release; limited open defects",5:"Long-term support train; minimal open defects"}},
+    {id:"n_cves",      lbl:"CVE / security advisory exposure", sub:"Open CVEs against proposed code version; patch availability",              map:{1:"Critical open CVEs, no patch",2:"High CVEs unpatched",3:"Low/medium CVEs; patch available",4:"No active CVEs against proposed version",5:"No CVEs; clean security advisory history"}},
+    {id:"n_upgrade",   lbl:"Upgrade path clarity",            sub:"Clear upgrade path to future supported releases; ISSU support",             map:{1:"Unclear upgrade path",2:"Major upgrade effort required",3:"Upgrade path exists with planned downtime",4:"Clear path with minimal disruption",5:"ISSU supported; zero-downtime upgrades"}},
+    {id:"n_patches",   lbl:"Patch cadence & responsiveness",  sub:"Vendor patch frequency; time-to-fix for critical CVEs historically",        map:{1:"Infrequent patches; slow CVE response",2:"Patches slow",3:"Regular cadence",4:"Frequent + responsive to critical CVEs",5:"Best-in-class patch cadence; proactive notification"}},
+  ]},
+  {id:"vendor",name:"Vendor Support & Lifecycle",icon:"🤝",sub:"Support quality, contract terms, lifecycle roadmap, and parts availability",weight:10,criteria:[
+    {id:"n_support",   lbl:"TAC support quality",             sub:"Vendor TAC responsiveness, engineer skill level, escalation path quality",  map:{1:"Poor TAC experience/reputation",2:"Below average",3:"Adequate",4:"Good; responsive with skilled engineers",5:"Premium support; dedicated resources"}},
+    {id:"n_lifecycle", lbl:"Lifecycle / EOS timeline",        sub:"End-of-sale and end-of-life dates; support window remaining",               map:{1:"EOS announced or imminent",2:"<3 years lifecycle remaining",3:"3–5 years",4:"5–8 years",5:">8 years lifecycle; long-term roadmap committed"}},
+    {id:"n_parts",     lbl:"Spare parts availability",        sub:"Spare modules, PSUs, and replacements available; RMA SLA terms",           map:{1:"Parts already scarce",2:"Limited availability",3:"Available with lead time",4:"Good availability; <5 day RMA",5:"Stock maintained; NBD RMA available"}},
+    {id:"n_ndaa",      lbl:"NDAA / regulatory compliance",    sub:"NDAA Section 889 compliance; country of origin; FCC/regulatory approvals",  map:{1:"Non-compliant or unknown",2:"Partial compliance",3:"Compliant with documentation",4:"Fully compliant + certified",5:"Fully compliant + proactive compliance documentation"}},
+  ]},
+  {id:"sec",name:"Security & Compliance",icon:"🔒",sub:"Security features, hardening capability, and compliance posture",weight:10,criteria:[
+    {id:"n_harden",    lbl:"Hardening capability",            sub:"CIS benchmark or equivalent; unused service disable; AAA, SSH, SNMPv3 support",map:{1:"Cannot be hardened to standard",2:"Partial hardening possible",3:"Standard hardening achievable",4:"Full CIS-equivalent hardening",5:"Hardening automation; compliance drift detection"}},
+    {id:"n_mgt_plane", lbl:"Management plane protection",     sub:"CoPP, control plane policing, management VRF, OOB access support",          map:{1:"No management plane protection",2:"Basic ACL only",3:"CoPP/CPP implemented",4:"CoPP + management VRF + OOB",5:"Zero-trust management plane architecture"}},
+    {id:"n_crypto",    lbl:"Cryptographic standards",         sub:"TLS 1.2/1.3, SSHv2, SNMPv3, MACsec support where applicable",              map:{1:"Weak or legacy crypto only",2:"Partial modern crypto",3:"Standard modern crypto",4:"Full modern crypto suite",5:"FIPS-validated crypto; quantum-resistant roadmap"}},
+  ]},
+];
+
+const CATS_CARD=[
+  {id:"compat",name:"Compatibility & Integration",icon:"🔗",sub:"Physical fit, hardware compatibility, and software support matrix",weight:25,criteria:[
+    {id:"c_hw",        lbl:"Hardware compatibility",          sub:"Card is supported in target chassis; slot compatibility confirmed",          map:{1:"Not compatible with target chassis",2:"Compatible with exceptions",3:"Compatible; minor caveats",4:"Fully compatible",5:"Fully compatible; verified in lab"}},
+    {id:"c_sw",        lbl:"Software version support matrix", sub:"Required OS version supports the card; upgrade required or not",            map:{1:"Requires major OS upgrade",2:"Requires significant upgrade",3:"Minor upgrade required",4:"Supported on current version",5:"Supported; no upgrade needed"}},
+    {id:"c_power",     lbl:"Power / thermal budget impact",   sub:"Card power draw within chassis power budget and thermal envelope",          map:{1:"Exceeds power/thermal budget",2:"At limit",3:"Within budget with margin",4:"Comfortable headroom",5:"Minimal impact; headroom preserved"}},
+  ]},
+  {id:"fwperf",name:"Performance & Feature Delivery",icon:"⚡",sub:"Forwarding performance and feature capability of the card/firmware",weight:25,criteria:[
+    {id:"c_fwd",       lbl:"Forwarding rate / capacity",      sub:"PPS and bps rates meet deployment requirements",                           map:{1:"Insufficient capacity",2:"Marginal",3:"Meets requirements",4:"Exceeds requirements",5:"Significant headroom; future-proofed"}},
+    {id:"c_features",  lbl:"Feature support completeness",    sub:"All required features supported on this card (QoS, MPLS, encryption, etc.)",map:{1:"Major feature gaps",2:"Notable gaps",3:"Core features present",4:"Full required feature set",5:"Full features + future roadmap committed"}},
+  ]},
+  {id:"fwsafety",name:"Upgrade / Rollback Safety",icon:"🛡️",sub:"Risk of the upgrade and ability to recover if something goes wrong",weight:25,criteria:[
+    {id:"c_issu",      lbl:"ISSU / hitless upgrade support",  sub:"In-Service Software Upgrade supported; traffic impact during upgrade",      map:{1:"Requires full reload",2:"Redundancy failover required",3:"Switchover with brief disruption",4:"Near-hitless upgrade",5:"Full ISSU; zero traffic impact"}},
+    {id:"c_rollback",  lbl:"Rollback procedure quality",      sub:"Documented rollback; time to rollback; tested in lab prior to production",  map:{1:"No rollback procedure",2:"Rollback possible but complex",3:"Rollback documented; untested",4:"Rollback documented and tested",5:"Automated rollback; tested and timed"}},
+    {id:"c_regression",lbl:"Regression test coverage",        sub:"Test cases executed covering existing functionality before upgrade",        map:{1:"No regression testing performed",2:"Minimal testing",3:"Core function testing done",4:"Comprehensive test suite executed",5:"Full regression + automation suite passed"}},
+    {id:"c_fallback",  lbl:"Boot device / fallback image",    sub:"Secondary boot image configured; fallback procedure documented",           map:{1:"No fallback image",2:"Fallback exists but not configured",3:"Fallback configured",4:"Fallback configured + tested",5:"Automated fallback trigger + tested"}},
+  ]},
+  {id:"fwmaturity",name:"Code Maturity & CVE Status",icon:"💾",sub:"Stability of proposed version; security advisory status",weight:15,criteria:[
+    {id:"c_release",   lbl:"Release train maturity",          sub:"Proposed version GA age; defect list reviewed against deployment use case",  map:{1:"Beta or first GA",2:"Early GA with significant bugs",3:"Established release",4:"Mature; recommended release",5:"Recommended long-term release"}},
+    {id:"c_cve",       lbl:"CVE exposure of proposed version",sub:"No critical/high CVEs open against proposed version",                      map:{1:"Critical CVEs open",2:"High CVEs unpatched",3:"Low/medium CVEs only",4:"No active CVEs",5:"Clean security history for this train"}},
+  ]},
+  {id:"fwops",name:"Operational Impact",icon:"🖥️",sub:"Impact to ongoing operations during and after the change",weight:10,criteria:[
+    {id:"c_downtime",  lbl:"Planned downtime window required", sub:"Maintenance window duration and customer/service impact",                  map:{1:">4 hours",2:"2–4 hours",3:"30min–2 hours",4:"<30 minutes",5:"Zero downtime / hitless"}},
+    {id:"c_monitoring",lbl:"Post-upgrade monitoring plan",     sub:"Monitoring enhanced post-upgrade; alert thresholds reviewed",             map:{1:"No monitoring plan",2:"Standard monitoring only",3:"Enhanced monitoring for 24h",4:"Enhanced monitoring for 72h+",5:"Automated anomaly detection + rollback trigger"}},
+  ]},
+];
+
+const CATS_EOL=[
+  {id:"eol_vendor",name:"Vendor Support Status",icon:"📋",sub:"Formal support lifecycle position from vendor — higher score = more urgent",weight:25,eol:true,criteria:[
+    {id:"e_eos",       lbl:"End-of-sale / end-of-life status",sub:"Current position in vendor lifecycle",                                      map:{1:"Actively sold; full lifecycle remaining",2:"EOS announced; support continues",3:"EOS reached; software support only",4:"End-of-SW-maintenance reached",5:"Past end-of-life; no support available"}},
+    {id:"e_patches",   lbl:"Security patch availability",     sub:"Critical CVEs patched; security advisories still issued by vendor",        map:{1:"Full patch coverage",2:"Security patches still issued",3:"Patches only for critical CVEs",4:"No new patches; rely on workarounds",5:"No patches available; unmitigated CVEs exist"}},
+    {id:"e_contract",  lbl:"Maintenance contract status",     sub:"Active maintenance/support contract in place",                             map:{1:"Active contract; multi-year",2:"Contract active; renewal due soon",3:"Contract expiring <12 months",4:"Contract lapsed; vendor extended support only",5:"No active contract; no support path"}},
+  ]},
+  {id:"eol_sec",name:"Security Risk",icon:"🔒",sub:"Security exposure from continued operation — higher score = more urgent",weight:25,eol:true,criteria:[
+    {id:"e_cve",       lbl:"Open CVE exposure",               sub:"Critical or high CVEs present with no patch path",                         map:{1:"No open CVEs",2:"Low CVEs only; mitigated",3:"Medium CVEs; monitoring required",4:"High CVEs; mitigation only",5:"Critical CVEs; no patch path available"}},
+    {id:"e_crypto",    lbl:"Cryptographic weakness",          sub:"Weak ciphers, legacy protocols (SSHv1, SNMPv1/v2, TLS 1.0) in use",       map:{1:"All modern crypto; fully hardened",2:"Minor legacy; mitigated",3:"Some legacy protocols in use",4:"Significant legacy crypto exposure",5:"Critical cryptographic weaknesses; no remediation"}},
+    {id:"e_hardening", lbl:"Hardening posture maintainability",sub:"Can the device still be hardened to current security baseline?",          map:{1:"Fully hardenable to current baseline",2:"Minor gaps vs. baseline",3:"Notable gaps; partial hardening only",4:"Significant hardening gaps; accepted risk",5:"Cannot meet minimum security baseline"}},
+  ]},
+  {id:"eol_ops",name:"Operational Risk",icon:"⚠️",sub:"Risk to operations if device fails — higher score = more urgent",weight:20,eol:true,criteria:[
+    {id:"e_blast",     lbl:"Failure blast radius",            sub:"Impact to services and customers if this device fails without replacement available",map:{1:"Isolated; no critical services",2:"Minor service impact",3:"Moderate service impact",4:"Major service impact; redundancy limited",5:"Critical single point of failure"}},
+    {id:"e_spof",      lbl:"Redundancy / SPOF status",        sub:"Is there a redundant path or device if this one fails?",                   map:{1:"Fully redundant; no SPOF",2:"Redundant with minor gaps",3:"Partial redundancy",4:"Redundancy insufficient; SPOF risk",5:"Complete SPOF; no fallback"}},
+    {id:"e_mttr",      lbl:"MTTR if failure occurs",          sub:"How long to restore service if this device fails given current parts/support status",map:{1:"<1 hour; hot spare available",2:"Same-day restoration",3:"1–3 days",4:"1–2 weeks",5:">2 weeks or indeterminate"}},
+  ]},
+  {id:"eol_parts",name:"Parts & Replacement",icon:"🔧",sub:"Hardware availability and replacement procurement risk — higher score = more urgent",weight:15,eol:true,criteria:[
+    {id:"e_parts",     lbl:"Spare parts availability",        sub:"Replacement modules, PSUs, and optics obtainable",                         map:{1:"Readily available; stock on hand",2:"Available from vendor",3:"Available 3rd party; lead time moderate",4:"Scarce; 3rd party only with long lead",5:"Unavailable; no replacement source"}},
+    {id:"e_rma",       lbl:"RMA / advance replacement",       sub:"Vendor or 3rd party advance replacement service still available",          map:{1:"NBD RMA active",2:"RMA available; extended SLA",3:"Third-party only; acceptable SLA",4:"No RMA; self-maintain only",5:"No replacement service of any kind"}},
+  ]},
+  {id:"eol_replace",name:"Replacement Complexity",icon:"🔄",sub:"How hard is migration — higher score = more complex to replace",weight:15,eol:true,criteria:[
+    {id:"e_feature",   lbl:"Replacement feature parity gap",  sub:"Can a replacement product match all features/protocols currently in use?",  map:{1:"Direct replacement available; full parity",2:"Minor feature delta; manageable",3:"Moderate migration effort",4:"Significant feature/config migration",5:"No direct replacement; major re-architecture required"}},
+    {id:"e_budget",    lbl:"Replacement budget status",       sub:"Is capital allocated and approved for replacement?",                       map:{1:"Funded; PO in process",2:"Budgeted; pending approval",3:"In budget planning",4:"Not budgeted; requires new capital request",5:"No funding path identified"}},
+    {id:"e_leadtime",  lbl:"Replacement procurement lead time",sub:"How long to procure and deploy replacement hardware?",                   map:{1:"In stock; <1 week",2:"2–4 weeks",3:"4–12 weeks",4:"3–6 months",5:">6 months; supply chain risk"}},
+  ]},
+];
+
+// RFP uses same cats as NEW but for 3 devices
+const CATS_RFP = JSON.parse(JSON.stringify(CATS_NEW));
+
+// ── STATE ──
+let currentMode='new';
+let evalMeta={name:'',vendor:'',evaluator:'',environment:'',phase:'lab',audience:'',notes:''};
+let scores={};
+let crit_notes={};
+let weights={};
+let rfpDevice=0; // 0,1,2 for RFP mode
+let rfpScores=[[],[],[]];
+let rfpNames=['Device 1','Device 2','Device 3'];
+let rfpNotes=[[],[],[]];
+
+function getCats(){return currentMode==='new'?CATS_NEW:currentMode==='card'?CATS_CARD:currentMode==='eol'?CATS_EOL:CATS_RFP;}
+
+function initState(){
+  scores={};crit_notes={};
+  getCats().forEach(cat=>{
+    weights[cat.id]=cat.weight;
+    cat.criteria.forEach(c=>{scores[c.id]=0;crit_notes[c.id]='';});
+  });
+  if(currentMode==='rfp'){
+    rfpScores=[[],[],[]];rfpNotes=[[],[],[]];
+    for(let d=0;d<3;d++){
+      getCats().forEach(cat=>cat.criteria.forEach(c=>{
+        if(!rfpScores[d])rfpScores[d]={};
+        if(!rfpNotes[d])rfpNotes[d]={};
+        rfpScores[d][c.id]=0;rfpNotes[d][c.id]='';
+      }));
+    }
+  }
+}
+
+// ── MODE SETUP ──
+function selectMode(m){
+  currentMode=m;
+  document.querySelectorAll('.mode-opt').forEach(el=>{
+    el.className='mode-opt';
+    const id=el.id.replace('mopt-','');
+    if(id===m)el.classList.add(`active-${m}`);
+  });
+  const phase=document.getElementById('ms-phase');
+  if(m==='eol'){phase.value='eol';}else if(m==='rfp'){phase.value='procurement';}else{if(phase.value==='eol'||phase.value==='procurement')phase.value='lab';}
+  document.getElementById('start-btn').style.background=MODE_CFG[m].color;
+}
+
+function startEvaluation(){
+  const name=document.getElementById('ms-name').value.trim();
+  if(!currentMode||!name){alert('Select evaluation type and enter equipment name.');return;}
+  evalMeta={
+    name,vendor:document.getElementById('ms-vendor').value,
+    evaluator:document.getElementById('ms-evaluator').value,
+    environment:document.getElementById('ms-env').value,
+    phase:document.getElementById('ms-phase').value,
+    audience:document.getElementById('ms-audience').value,
+    notes:document.getElementById('ms-notes').value,
+  };
+  initState();
+  document.getElementById('mode-screen').classList.add('hidden');
+  applyModeUI();
+  renderWeights();
+  renderCats();
+  renderMetaPanel();
+}
+
+function applyModeUI(){
+  const cfg=MODE_CFG[currentMode];
+  document.documentElement.style.setProperty('--mode-accent',cfg.color);
+  document.querySelectorAll('.tab').forEach(t=>{if(t.classList.contains('active'))t.style.borderBottomColor=cfg.color;});
+  document.getElementById('mode-badge-wrap').innerHTML=`<div class="mode-badge" style="background:${cfg.bg};border-color:${cfg.bdr}"><div class="dot" style="background:${cfg.color}"></div><span style="color:${cfg.color}">${cfg.label.toUpperCase()}</span></div>`;
+  document.getElementById('app-title').textContent=`${evalMeta.name}${evalMeta.vendor?' — '+evalMeta.vendor:''}`;
+  const phaseLabels={lab:'Lab / Pre-deployment',field:'Field / Post-deployment',procurement:'Procurement / RFP',eol:'EOL / Legacy Review'};
+  document.getElementById('app-sub').textContent=`${phaseLabels[evalMeta.phase]||evalMeta.phase}${evalMeta.audience?' · '+evalMeta.audience:''}`;
+  document.getElementById('prog-fill').style.background=cfg.color;
+  // legend
+  const isEol=currentMode==='eol';
+  document.getElementById('legend-wrap').innerHTML=isEol
+    ?`<div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>1 — Monitor only</div><div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>2 — Low urgency</div><div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Plan replacement</div><div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>4 — High urgency</div><div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>5 — Critical — replace now</div>`
+    :`<div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>1 — Failing</div><div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>2 — Poor</div><div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Acceptable</div><div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>4 — Good</div><div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>5 — Excellent</div>`;
+  // RFP device bar
+  if(currentMode==='rfp'){
+    document.getElementById('rfp-device-bar').style.display='block';
+    renderRFPBar();
+  }
+}
+
+function renderMetaPanel(){
+  const mp=document.getElementById('meta-panel');mp.style.display='block';
+  document.getElementById('meta-fields').innerHTML=`
+    <div><label>Equipment / Model</label><input value="${evalMeta.name}" onchange="evalMeta.name=this.value;document.getElementById('app-title').textContent=evalMeta.name+(evalMeta.vendor?' — '+evalMeta.vendor:'')"></div>
+    <div><label>Vendor</label><input value="${evalMeta.vendor}" onchange="evalMeta.vendor=this.value"></div>
+    <div><label>Evaluator</label><input value="${evalMeta.evaluator}" onchange="evalMeta.evaluator=this.value"></div>
+    <div><label>Approval audience</label><input value="${evalMeta.audience}" placeholder="e.g. Architecture Review Board" onchange="evalMeta.audience=this.value;document.getElementById('app-sub').textContent=(document.getElementById('app-sub').textContent.split('·')[0].trim())+(evalMeta.audience?' · '+evalMeta.audience:'')"></div>
+    <div style="grid-column:1/-1"><label>Notes / context</label><textarea onchange="evalMeta.notes=this.value">${evalMeta.notes}</textarea></div>`;
+}
+
+// ── WEIGHTS ──
+function renderWeights(){
+  const cats=getCats();
+  const cfg=MODE_CFG[currentMode];
+  let html='';
+  cats.forEach(cat=>{
+    html+=`<div class="weight-row">
+      <span class="weight-lbl">${cat.icon} ${cat.name}</span>
+      <input type="range" class="weight-slider" min="5" max="50" step="5" value="${weights[cat.id]||cat.weight}" id="ws-${cat.id}" oninput="updateWeight('${cat.id}',this.value)" style="accent-color:${cfg.color}">
+      <span class="weight-val" id="wv-${cat.id}">${weights[cat.id]||cat.weight}%</span>
+    </div>`;
+  });
+  document.getElementById('weight-rows').innerHTML=html;
+  updateWeightTotal();
+}
+
+function updateWeight(catId,val){
+  weights[catId]=parseInt(val);
+  document.getElementById(`wv-${catId}`).textContent=val+'%';
+  updateWeightTotal();
+  updateBadge();
+}
+
+function updateWeightTotal(){
+  const total=Object.values(weights).reduce((a,b)=>a+b,0);
+  const el=document.getElementById('wt-total');
+  el.textContent=`Total: ${total}%`;
+  el.className='weight-total '+(total===100?'wt-ok':'wt-warn');
+}
+
+function resetWeights(){getCats().forEach(cat=>{weights[cat.id]=cat.weight;const sl=document.getElementById(`ws-${cat.id}`);if(sl){sl.value=cat.weight;document.getElementById(`wv-${cat.id}`).textContent=cat.weight+'%';}});updateWeightTotal();}
+
+function weightTotal(){return Object.values(weights).reduce((a,b)=>a+b,0);}
+
+// ── SCORING ──
+function getScoresForDevice(){return currentMode==='rfp'?rfpScores[rfpDevice]:scores;}
+function getNotesForDevice(){return currentMode==='rfp'?rfpNotes[rfpDevice]:crit_notes;}
+
+function catAvg(cat,devScores){
+  const v=cat.criteria.map(c=>devScores[c.id]).filter(x=>x>0);
+  return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+}
+
+function calcWeightedOverall(devScores){
+  const total=weightTotal();if(total===0)return 0;
+  let w=0,tw=0;
+  getCats().forEach(cat=>{const a=catAvg(cat,devScores);if(a>0){w+=a*(weights[cat.id]/100);tw+=weights[cat.id]/100;}});
+  return tw>0?w/tw:0;
+}
+
+function totalCriteria(){return getCats().reduce((a,c)=>a+c.criteria.length,0);}
+function countScored(devScores){return Object.values(devScores).filter(v=>v>0).length;}
+
+function colorForScore(s,isEol){
+  if(!s)return{bg:'var(--surface2)',txt:'var(--text3)',bdr:'var(--border)',solid:'var(--border2)'};
+  const pal=isEol?EOL_SC:SC;
+  return{bg:pal.bg[s],txt:pal.txt[s],bdr:pal.bdr[s],solid:pal.solid[s]};
+}
+
+function bandLabel(s,isEol){
+  if(!s)return'Not scored';
+  if(isEol){
+    if(s<1.5)return'Monitor only';if(s<2.5)return'Low urgency';if(s<3.5)return'Plan replacement';if(s<4.2)return'High urgency';return'Critical — replace now';
+  }
+  if(s<1.5)return'Failing';if(s<2.5)return'Poor';if(s<3.5)return'Acceptable';if(s<4.2)return'Good';return'Excellent';
+}
+
+function gonogoLabel(s,isEol){
+  if(!s)return{v:'—',desc:'Complete scoring to generate recommendation.',c:'var(--surface2)',tc:'var(--text3)',bc:'var(--border)'};
+  if(isEol){
+    if(s>=4.2)return{v:'REPLACE NOW',desc:'Critical EOL risk. Immediate replacement action required.',c:'#FCEBEB',tc:'#791F1F',bc:'#F09595'};
+    if(s>=3.5)return{v:'PLAN REPLACEMENT',desc:'High urgency. Budget and procure replacement within 6 months.',c:'#FFF0E0',tc:'#7A3B00',bc:'#F5B96A'};
+    if(s>=2.5)return{v:'MONITOR',desc:'Moderate risk. Track lifecycle milestones and plan ahead.',c:'#FEFCE0',tc:'#6B5A00',bc:'#E8D840'};
+    return{v:'LOW RISK',desc:'Lifecycle risk is currently manageable. Continue normal monitoring.',c:'#E0FAE8',tc:'#0A4E28',bc:'#3DC87A'};
+  }
+  if(s>=4.2)return{v:'GO',desc:'Recommended for deployment. All major criteria passed.',c:'#E0FAE8',tc:'#0A4E28',bc:'#3DC87A'};
+  if(s>=3.5)return{v:'GO WITH CONDITIONS',desc:'Acceptable for deployment. Address identified findings before or shortly after cutover.',c:'#EDFAE0',tc:'#2E5E10',bc:'#A3D460'};
+  if(s>=2.5)return{v:'CONDITIONAL',desc:'Significant issues present. Resolve critical findings before deployment approval.',c:'#FEFCE0',tc:'#6B5A00',bc:'#E8D840'};
+  if(s>=1.5)return{v:'NO-GO',desc:'Multiple serious deficiencies. Not recommended for deployment in current state.',c:'#FFF0E0',tc:'#7A3B00',bc:'#F5B96A'};
+  return{v:'REJECT',desc:'Fails on critical criteria. Do not proceed with this equipment.',c:'#FCEBEB',tc:'#791F1F',bc:'#F09595'};
+}
+
+function setScore(cid,val,dev){
+  const isEol=currentMode==='eol';
+  if(currentMode==='rfp'){rfpScores[dev][cid]=val;}else{scores[cid]=val;}
+  // update buttons
+  document.querySelectorAll(`[data-cid="${cid}"][data-dev="${dev}"]`).forEach(btn=>{
+    const bv=parseInt(btn.dataset.val);
+    const base=isEol?`score-btn e${bv}`:`score-btn b${bv}`;
+    btn.className=base+(bv===val?' sel':'');
+  });
+  // update label
+  const lbl=document.getElementById(`lbl-${cid}-${dev}`);
+  if(lbl){
+    const cat=getCats().find(c=>c.criteria.find(cr=>cr.id===cid));
+    const cr=cat&&cat.criteria.find(cr=>cr.id===cid);
+    if(val>0&&cr){
+      const col=colorForScore(val,isEol);
+      lbl.textContent=cr.map[val];lbl.style.cssText=`display:inline-block;background:${col.bg};color:${col.txt};`;
+    }else{lbl.style.display='none';}
+  }
+  updateCatPill(getCats().find(c=>c.criteria.find(cr=>cr.id===cid)));
+  updateProgress();updateBadge();
+}
+
+function updateCatPill(cat){
+  if(!cat)return;
+  const devScores=getScoresForDevice();
+  const avg=catAvg(cat,devScores);
+  const pill=document.getElementById(`cpill-${cat.id}`);
+  const bar=document.getElementById(`cbar-${cat.id}`);
+  const sc=cat.criteria.filter(c=>devScores[c.id]>0).length,tot=cat.criteria.length;
+  const isEol=currentMode==='eol';
+  if(pill){
+    if(avg>0){const col=colorForScore(avg,isEol);pill.style.cssText=`background:${col.bg};color:${col.txt};border-color:${col.bdr};`;pill.textContent=`${avg.toFixed(1)} — ${bandLabel(avg,isEol)} (${sc}/${tot})`;}
+    else{pill.style.cssText='';pill.textContent=`Not scored (0/${tot})`;}
+  }
+  if(bar){const col=colorForScore(avg,isEol);bar.style.width=(avg>0?avg/5*100:0)+'%';bar.style.background=avg>0?col.solid:'';}
+}
+
+function updateProgress(){
+  const ds=getScoresForDevice();const sc=countScored(ds),tot=totalCriteria();
+  document.getElementById('prog-fill').style.width=Math.round(sc/tot*100)+'%';
+  document.getElementById('prog-label').textContent=`${sc} of ${tot} criteria scored${currentMode==='rfp'?' ('+rfpNames[rfpDevice]+')':''}`;
+}
+
+function updateBadge(){
+  const ds=getScoresForDevice();const o=calcWeightedOverall(ds);
+  const badge=document.getElementById('overall-badge');const isEol=currentMode==='eol';
+  if(!o){badge.style.cssText='';badge.textContent='Not scored';return;}
+  const col=colorForScore(o,isEol);badge.style.cssText=`background:${col.bg};color:${col.txt};border-color:${col.bdr};`;
+  badge.textContent=`${bandLabel(o,isEol)} — ${o.toFixed(2)}`;
+}
+
+function toggleCat(id){const b=document.getElementById(`cbody-${id}`),ch=document.getElementById(`cchev-${id}`);const o=b.classList.toggle('open');ch.classList.toggle('open',o);}
+function toggleNote(cid,dev){const n=document.getElementById(`note-${cid}-${dev}`);n.classList.toggle('vis');if(n.classList.contains('vis'))n.focus();}
+
+// ── RENDER CATEGORIES ──
+function renderCats(){
+  const container=document.getElementById('cats-container');container.innerHTML='';
+  const isEol=currentMode==='eol';
+  const dev=currentMode==='rfp'?rfpDevice:0;
+  const devScores=getScoresForDevice();
+  const cfg=MODE_CFG[currentMode];
+  getCats().forEach(cat=>{
+    const tot=cat.criteria.length;
+    const critHtml=cat.criteria.map(cr=>{
+      const btnClass=isEol?`score-btn e`:`score-btn b`;
+      const btns=[1,2,3,4,5].map(v=>`<button class="${btnClass}${v}" data-cid="${cr.id}" data-dev="${dev}" data-val="${v}" onclick="setScore('${cr.id}',${v},${dev})">${v}</button>`).join('');
+      return`<div class="crit-row">
+        <div><div class="crit-label">${cr.lbl}</div><div class="crit-sub">${cr.sub}</div>
+          <span class="crit-sel-lbl" id="lbl-${cr.id}-${dev}"></span>
+          <div class="crit-note-toggle" onclick="toggleNote('${cr.id}',${dev})">+ add note</div>
+          <textarea class="crit-note" id="note-${cr.id}-${dev}" placeholder="Evidence, test results, observations..." rows="2" onchange="${currentMode==='rfp'?`rfpNotes[${dev}]['${cr.id}']=this.value`:`crit_notes['${cr.id}']=this.value`}"></textarea>
+        </div>
+        <div class="score-col"><div class="score-buttons">${btns}</div></div>
+      </div>`;
+    }).join('');
+    const div=document.createElement('div');div.className='cat-card';
+    div.innerHTML=`<div class="cat-header" onclick="toggleCat('${cat.id}')">
+      <div class="cat-left"><div class="cat-icon">${cat.icon}</div>
+        <div><div class="cat-name">${cat.name}</div><div class="cat-sub">${cat.sub}</div></div></div>
+      <div class="cat-right">
+        <div style="font-size:11px;color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:20px">${Math.round(weights[cat.id]||cat.weight)}% weight</div>
+        <div class="cat-bar-wrap"><div class="cat-bar-inner" id="cbar-${cat.id}" style="background:${cfg.color}"></div></div>
+        <div class="cat-pill" id="cpill-${cat.id}">Not scored (0/${tot})</div>
+        <div class="chevron" id="cchev-${cat.id}">&#9654;</div>
+      </div></div>
+      <div class="cat-body" id="cbody-${cat.id}">${critHtml}</div>`;
+    container.appendChild(div);
+  });
+  toggleCat(getCats()[0].id);
+}
+
+// ── RFP DEVICE BAR ──
+function renderRFPBar(){
+  const cfg=MODE_CFG.rfp;
+  document.getElementById('rfp-tabs').innerHTML=rfpNames.map((n,i)=>`<div class="device-tab ${i===rfpDevice?'active':''}" onclick="switchRFPDevice(${i})">${n}</div>`).join('');
+  document.getElementById('rfp-name-row').innerHTML=rfpNames.map((n,i)=>`<input value="${n}" placeholder="Device ${i+1} name" style="width:160px" oninput="rfpNames[${i}]=this.value;document.querySelectorAll('.device-tab')[${i}].textContent=this.value">`).join('');
+}
+
+function switchRFPDevice(d){rfpDevice=d;renderCats();renderRFPBar();updateProgress();updateBadge();
+  // restore scores and notes
+  getCats().forEach(cat=>cat.criteria.forEach(cr=>{
+    const s=rfpScores[d][cr.id];
+    if(s>0)setScore(cr.id,s,d);
+    const nt=document.getElementById(`note-${cr.id}-${d}`);
+    if(nt&&rfpNotes[d][cr.id])nt.value=rfpNotes[d][cr.id];
+  }));
+}
+
+// ── SUMMARY ──
+function renderSummary(){
+  const isEol=currentMode==='eol';const isRfp=currentMode==='rfp';
+  const ds=isRfp?rfpScores[rfpDevice]:scores;
+  const o=calcWeightedOverall(ds);
+  const sc=countScored(ds),tot=totalCriteria();
+  const col=colorForScore(o,isEol);
+  const gn=gonogoLabel(o,isEol);
+
+  document.getElementById('sum-metrics').innerHTML=`
+    <div class="sum-mc"><div class="sum-lbl">${isEol?'Urgency score':'Composite score'}</div><div class="sum-val" style="color:${o?col.solid:'var(--text3)'}">${o?o.toFixed(2):'—'}</div><div class="sum-sub">out of 5.00 (weighted)</div></div>
+    <div class="sum-mc"><div class="sum-lbl">${isEol?'Risk band':'Rating'}</div><div class="sum-val" style="font-size:14px;margin-top:4px;color:${o?col.solid:'var(--text3)'}">${o?bandLabel(o,isEol):'—'}</div></div>
+    <div class="sum-mc"><div class="sum-lbl">Completion</div><div class="sum-val">${Math.round(sc/tot*100)}%</div><div class="sum-sub">${sc}/${tot} criteria</div></div>
+    <div class="sum-mc"><div class="sum-lbl">Weight total</div><div class="sum-val" style="color:${weightTotal()===100?'#0F6E56':'#A32D2D'}">${weightTotal()}%</div><div class="sum-sub">${weightTotal()===100?'Balanced':'Rebalance needed'}</div></div>`;
+
+  document.getElementById('gonogo-wrap').innerHTML=o?`<div class="gonogo-box" style="background:${gn.c};border-color:${gn.bc}">
+    <div class="gonogo-verdict" style="color:${gn.tc}">${gn.v}</div>
+    <div><div style="font-size:12px;color:${gn.tc};opacity:.8">${gn.desc}</div></div>
+  </div>`:'';
+
+  document.getElementById('sum-bars').innerHTML=getCats().map(cat=>{
+    const a=catAvg(cat,ds),col=colorForScore(a,isEol);
+    const wt=weights[cat.id]||cat.weight;
+    return`<div class="dbar-row">
+      <div class="dbar-lbl">${cat.icon} ${cat.name} <span style="font-size:10px;color:var(--text3)">(${wt}%)</span></div>
+      <div class="dbar-track"><div class="dbar-fill" style="width:${a?a/5*100:0}%;background:${a?col.solid:''}"></div></div>
+      <div class="dbar-sc" style="color:${a?col.solid:'var(--text3)'}">${a?a.toFixed(1):'—'}</div>
+    </div>`;
+  }).join('');
+
+  // RFP comparison table
+  const rfpWrap=document.getElementById('rfp-compare-wrap');
+  if(isRfp){
+    rfpWrap.style.display='block';
+    const ranked=rfpNames.map((n,i)=>({name:n,score:calcWeightedOverall(rfpScores[i])})).sort((a,b)=>b.score-a.score);
+    const tableRows=getCats().map(cat=>{
+      const cells=rfpScores.map((ds,i)=>{const a=catAvg(cat,ds);const col=colorForScore(a,false);return`<td style="text-align:center"><span style="font-size:12px;font-weight:600;color:${a?col.solid:'var(--text3)'}">${a?a.toFixed(1):'—'}</span></td>`;}).join('');
+      return`<tr><td>${cat.icon} ${cat.name}</td>${cells}</tr>`;
+    }).join('');
+    document.getElementById('rfp-compare-table-wrap').innerHTML=`
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        ${ranked.map((r,i)=>`<div style="padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);text-align:center;min-width:120px">
+          <div class="rfp-rank r${i+1}" style="margin:0 auto 6px">${i+1}</div>
+          <div style="font-size:13px;font-weight:600">${r.name}</div>
+          <div style="font-size:20px;font-weight:700;color:${colorForScore(r.score,false).solid}">${r.score?r.score.toFixed(2):'—'}</div>
+        </div>`).join('')}
+      </div>
+      <table class="rfp-compare-table"><thead><tr><th>Category</th>${rfpNames.map(n=>`<th style="text-align:center">${n}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>`;
+  }else{rfpWrap.style.display='none';}
+
+  // EOL queue
+  const eolWrap=document.getElementById('eol-queue-wrap');eolWrap.style.display='none';
+
+  // Findings
+  const findings=[];
+  getCats().forEach(cat=>cat.criteria.forEach(cr=>{
+    const s=ds[cr.id];
+    if(!s)return;
+    const threshold=isEol?3:3;
+    if(isEol?s>=4:s<=2)findings.push({sev:isEol?(s===5?'c':'h'):(s===1?'c':'h'),lbl:cr.lbl,cat:cat.name,score:s,desc:cr.map[s]});
+    else if(isEol?s===3:s===3)findings.push({sev:'m',lbl:cr.lbl,cat:cat.name,score:s,desc:cr.map[s]});
+  }));
+  findings.sort((a,b)=>isEol?b.score-a.score:a.score-b.score);
+  document.getElementById('sum-findings').innerHTML=findings.length
+    ?findings.slice(0,10).map(f=>`<li class="fi"><span class="sev sev-${f.sev}">${f.sev==='c'?'CRITICAL':'HIGH'===f.sev?'HIGH':'MEDIUM'}</span><span><strong>${f.lbl}</strong> — ${f.desc} <span style="color:var(--text3);font-size:11px">(${f.cat})</span></span></li>`).join('')
+    :'<li style="padding:8px 0;color:var(--text3);font-size:13px">No critical findings — score all criteria for complete analysis.</li>';
+}
+
+// ── EXEC REPORT ──
+function renderExec(){
+  const isEol=currentMode==='eol';const isRfp=currentMode==='rfp';
+  const ds=isRfp?rfpScores[rfpDevice]:scores;
+  const o=calcWeightedOverall(ds);
+  const col=colorForScore(o,isEol);
+  const gn=gonogoLabel(o,isEol);
+  const cfg=MODE_CFG[currentMode];
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const phaseLabels={lab:'Lab / Pre-deployment Evaluation',field:'Field / Post-deployment Validation',procurement:'Procurement / RFP Evaluation',eol:'End-of-Life / Legacy Assessment'};
+
+  // category detail tables
+  const catDetail=getCats().map(cat=>{
+    const rows=cat.criteria.map(cr=>{
+      const s=ds[cr.id];const col=colorForScore(s,isEol);
+      const chip=s?`<span class="chip" style="background:${col.solid};color:${s===3&&!isEol?'#3a3000':'#fff'}">${s}</span>`:`<span class="chip" style="background:var(--surface2);color:var(--text3)">—</span>`;
+      const noteHtml=(currentMode==='rfp'?rfpNotes[rfpDevice][cr.id]:crit_notes[cr.id])?`<div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic">Note: ${currentMode==='rfp'?rfpNotes[rfpDevice][cr.id]:crit_notes[cr.id]}</div>`:'';
+      return`<tr><td>${cr.lbl}<br><span style="font-size:10px;color:var(--text3)">${cr.sub}</span>${noteHtml}</td><td style="text-align:center">${chip}</td><td style="color:${s?col.txt:'var(--text3)'};font-size:12px">${s?cr.map[s]:'—'}</td></tr>`;
+    }).join('');
+    const avg=catAvg(cat,ds);const col=colorForScore(avg,isEol);
+    return`<div class="exec-detail"><h2>${cat.icon} ${cat.name} <span style="font-size:13px;font-weight:400;color:${avg?col.solid:'var(--text3)'}">${avg?`${avg.toFixed(1)} — ${bandLabel(avg,isEol)}`:''}</span> <span style="font-size:11px;color:var(--text3)">(weight: ${weights[cat.id]||cat.weight}%)</span></h2>
+      <table class="etbl"><thead><tr><th>Criterion</th><th style="width:50px;text-align:center">Score</th><th style="width:180px">Rating</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+
+  // RFP ranking section
+  let rfpSection='';
+  if(isRfp){
+    const ranked=rfpNames.map((n,i)=>({name:n,score:calcWeightedOverall(rfpScores[i]),idx:i})).sort((a,b)=>b.score-a.score);
+    rfpSection=`<div class="exec-findings"><h2>Device ranking</h2>
+      ${ranked.map((r,rank)=>`<div class="efc" style="border-left:3px solid ${colorForScore(r.score,false).solid}">
+        <div style="display:flex;align-items:center;gap:10px"><span class="rfp-rank r${rank+1}">${rank+1}</span>
+        <div><div style="font-size:14px;font-weight:600">${r.name}</div>
+        <div style="font-size:12px;color:var(--text2)">Weighted score: ${r.score?r.score.toFixed(2):'Not scored'} — ${bandLabel(r.score,false)}</div></div></div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${getCats().map(cat=>{const a=catAvg(cat,rfpScores[r.idx]);const c=colorForScore(a,false);return a?`<span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${c.bg};color:${c.txt};border:1px solid ${c.bdr}">${cat.name}: ${a.toFixed(1)}</span>`:''}).join('')}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // Findings
+  const findings=[];
+  getCats().forEach(cat=>cat.criteria.forEach(cr=>{
+    const s=ds[cr.id];if(!s)return;
+    if(isEol?s>=4:s<=2)findings.push({sev:isEol?(s===5?'CRITICAL':'HIGH'):(s===1?'CRITICAL':'HIGH'),lbl:cr.lbl,cat:cat.name,score:s,desc:cr.map[s],sub:cr.sub,note:currentMode==='rfp'?rfpNotes[rfpDevice][cr.id]:crit_notes[cr.id]});
+    else if(s===3)findings.push({sev:'MEDIUM',lbl:cr.lbl,cat:cat.name,score:s,desc:cr.map[s],sub:cr.sub,note:currentMode==='rfp'?rfpNotes[rfpDevice][cr.id]:crit_notes[cr.id]});
+  }));
+  findings.sort((a,b)=>isEol?b.score-a.score:a.score-b.score);
+
+  document.getElementById('exec-content').innerHTML=`
+    <div class="exec-hdr">
+      <h1>${phaseLabels[evalMeta.phase]||'Equipment Evaluation'}</h1>
+      <h2>${evalMeta.name}${evalMeta.vendor?' — '+evalMeta.vendor:''}${isRfp?' — '+rfpNames[rfpDevice]:''}</h2>
+      <div class="exec-badge" style="background:${cfg.bg};border-color:${cfg.bdr};color:${cfg.color}">${cfg.label}</div>
+      <div class="exec-meta">
+        <span><strong>Date:</strong> ${now}</span>
+        <span><strong>Evaluator:</strong> ${evalMeta.evaluator||'—'}</span>
+        ${evalMeta.audience?`<span><strong>Audience:</strong> ${evalMeta.audience}</span>`:''}
+        ${evalMeta.environment?`<span><strong>Environment:</strong> ${evalMeta.environment}</span>`:''}
+        <span><strong>Completion:</strong> ${countScored(ds)}/${totalCriteria()} criteria</span>
+      </div>
+    </div>
+
+    <div class="exec-scorecard">
+      <div class="exec-overall" style="background:${o?col.bg:'var(--surface2)'};border-color:${o?col.bdr:'var(--border)'}">
+        <div class="exec-big" style="color:${o?col.solid:'var(--text3)'}">${o?o.toFixed(2):'—'}</div>
+        <div class="exec-band" style="color:${o?col.txt:'var(--text3)'}">${o?bandLabel(o,isEol):'Not scored'}</div>
+        <div style="margin-top:10px;padding:8px 12px;border-radius:var(--radius-sm);background:${gn.c};border:1px solid ${gn.bc}">
+          <div style="font-size:14px;font-weight:700;color:${gn.tc}">${gn.v}</div>
+          <div style="font-size:11px;color:${gn.tc};margin-top:3px;opacity:.85">${gn.desc}</div>
+        </div>
+      </div>
+      <div class="exec-cats"><h3>Category scores</h3>
+        ${getCats().map(cat=>{const a=catAvg(cat,ds);const col=colorForScore(a,isEol);return`<div class="dbar-row" style="margin-bottom:7px">
+          <div class="dbar-lbl">${cat.icon} ${cat.name}</div>
+          <div class="dbar-track"><div class="dbar-fill" style="width:${a?a/5*100:0}%;background:${a?col.solid:''}"></div></div>
+          <div class="dbar-sc" style="color:${a?col.solid:'var(--text3)'}">${a?a.toFixed(1):'—'}</div>
+        </div>`;}).join('')}
+      </div>
+    </div>
+
+    ${evalMeta.notes?`<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--text2)"><strong>Context:</strong> ${evalMeta.notes}</div>`:''}
+
+    ${rfpSection}
+
+    ${findings.length?`<div class="exec-findings"><h2>${isEol?'Replacement urgency findings':'Key findings — '+findings.length+' items'}</h2>
+      ${findings.map(f=>`<div class="efc" style="border-left:3px solid ${colorForScore(f.score,isEol).solid}">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px">
+          <span class="sev sev-${f.sev==='CRITICAL'?'c':f.sev==='HIGH'?'h':'m'}">${f.sev}</span>
+          <div><div style="font-size:13px;font-weight:600">${f.lbl}</div><div style="font-size:11px;color:var(--text3)">${f.cat}</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:70px 1fr;gap:3px;font-size:12px">
+          <span style="color:var(--text3);font-weight:500">Rated:</span><span style="color:${colorForScore(f.score,isEol).txt}">${f.desc}</span>
+          <span style="color:var(--text3);font-weight:500">Scope:</span><span style="color:var(--text2)">${f.sub}</span>
+          ${f.note?`<span style="color:var(--text3);font-weight:500">Note:</span><span style="color:var(--text2);font-style:italic">${f.note}</span>`:''}
+        </div>
+      </div>`).join('')}
+    </div>`:''}
+
+    ${catDetail}`;
+}
+
+// ── JSON ──
+function buildPayload(){
+  const ds=currentMode==='rfp'?rfpScores[rfpDevice]:scores;
+  return{
+    schema_version:"1.0",tool:"equipment-evaluation",
+    mode:currentMode,meta:evalMeta,
+    assessment_date:new Date().toISOString(),
+    weights,
+    overall_score:parseFloat(calcWeightedOverall(ds).toFixed(4)),
+    verdict:gonogoLabel(calcWeightedOverall(ds),currentMode==='eol').v,
+    completion:{scored:countScored(ds),total:totalCriteria()},
+    rfp_names:currentMode==='rfp'?rfpNames:undefined,
+    categories:getCats().map(cat=>({
+      id:cat.id,name:cat.name,weight:weights[cat.id]||cat.weight,
+      avg:parseFloat(catAvg(cat,ds).toFixed(4)),
+      criteria:cat.criteria.map(cr=>({
+        id:cr.id,label:cr.lbl,
+        score:currentMode==='rfp'?rfpScores.map(rs=>rs[cr.id]||0):ds[cr.id],
+        rating:ds[cr.id]?cr.map[ds[cr.id]]:null,
+        note:currentMode==='rfp'?rfpNotes.map(rn=>rn[cr.id]||''):crit_notes[cr.id]||''
+      }))
+    }))
+  };
+}
+
+function generateJSON(){document.getElementById('json-out').value=JSON.stringify(buildPayload(),null,2);}
+function exportEval(){generateJSON();switchTab('io');}
+function copyJSON(){generateJSON();navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to clipboard',1500);}
+function downloadJSON(){
+  const p=buildPayload();
+  const name=(p.meta.name||'eval').replace(/\s+/g,'-').toLowerCase();
+  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`equipment-eval-${p.mode}-${name}-${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+
+function loadFromFile(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d.tool!=='equipment-evaluation'){document.getElementById('load-status').textContent='⚠ Not an equipment evaluation file.';return;}
+    currentMode=d.mode;
+    evalMeta=d.meta||{};
+    if(d.weights)Object.assign(weights,d.weights);
+    if(d.rfp_names)rfpNames=d.rfp_names;
+    initState();
+    d.categories.forEach(cat=>cat.criteria.forEach(cr=>{
+      if(currentMode==='rfp'&&Array.isArray(cr.score)){
+        cr.score.forEach((s,i)=>{if(s>0){rfpScores[i][cr.id]=s;}});
+        if(Array.isArray(cr.note))cr.note.forEach((n,i)=>{rfpNotes[i][cr.id]=n||'';});
+      }else{if(cr.score>0)scores[cr.id]=cr.score;if(cr.note)crit_notes[cr.id]=cr.note;}
+    }));
+    document.getElementById('mode-screen').classList.add('hidden');
+    applyModeUI();renderWeights();renderCats();renderMetaPanel();updateProgress();updateBadge();
+    document.getElementById('load-status').style.color='#2E5E10';
+    document.getElementById('load-status').textContent=`✓ Loaded: ${evalMeta.name||'Evaluation'} (${currentMode})`;
+  }catch(err){document.getElementById('load-status').style.color='#791F1F';document.getElementById('load-status').textContent='Error: '+err.message;}};
+  r.readAsText(file);
+}
+
+function resetAll(){if(!confirm('Reset all scores and return to mode selection?'))return;document.getElementById('mode-screen').classList.remove('hidden');initState();document.getElementById('cats-container').innerHTML='';document.getElementById('mode-badge-wrap').innerHTML='';document.getElementById('app-title').textContent='Network Equipment Evaluation';document.getElementById('app-sub').textContent='Configure evaluation to begin';document.getElementById('overall-badge').style.cssText='';document.getElementById('overall-badge').textContent='Not scored';document.getElementById('prog-fill').style.width='0%';document.getElementById('prog-label').textContent='0 criteria scored';document.getElementById('meta-panel').style.display='none';document.getElementById('rfp-device-bar').style.display='none';}
+
+// ── TABS ──
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);if(x.dataset.tab===t)x.style.borderBottomColor=MODE_CFG[currentMode]?.color||'var(--text)';else x.style.borderBottomColor='transparent';});
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));
+  if(t==='summary')renderSummary();
+  if(t==='exec')renderExec();
+  if(t==='weights')renderWeights();
+}
+document.getElementById('tabs').addEventListener('click',e=>{const tab=e.target.closest('.tab');if(!tab)return;switchTab(tab.dataset.tab);});
+
+// default mode selection
+selectMode('new');
+</script>
+</body>
+</html>

@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Configuration Audit</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f3f4f6;--surface:#fff;--surface2:#eaecf0;--border:#d8dae4;--border2:#aeb2c4;
+  --text:#12131c;--text2:#42465a;--text3:#7e82a0;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Consolas','Courier New',monospace;
+  --radius:10px;--radius-sm:6px;
+  --pass:#16a34a;--pass-bg:#f0fdf4;--pass-bdr:#86efac;
+  --partial:#d97706;--partial-bg:#fffbeb;--partial-bdr:#fcd34d;
+  --fail:#dc2626;--fail-bg:#fef2f2;--fail-bdr:#fca5a5;
+  --na:#6b7280;--na-bg:#f9fafb;--na-bdr:#d1d5db;
+  --crit:#7c2d12;--crit-bg:#fff7ed;
+  --high:#dc2626;--high-bg:#fef2f2;
+  --med:#d97706;--med-bg:#fffbeb;
+  --low:#2563eb;--low-bg:#eff4ff;
+  --info:#0891b2;--info-bg:#ecfeff;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+
+/* ── SETUP SCREEN ── */
+#setup-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;}
+#setup-screen.hidden{display:none;}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:640px;width:100%;margin:auto;}
+.setup-card h2{font-size:18px;font-weight:600;margin-bottom:4px;}
+.setup-card>p{font-size:12px;color:var(--text3);margin-bottom:20px;}
+.setup-section{margin-bottom:18px;}
+.setup-section h3{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.setup-field label{font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:3px;}
+.setup-field input,.setup-field select,.setup-field textarea{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);font-family:var(--font);}
+.setup-field textarea{resize:none;min-height:52px;}
+.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.plat-opt{padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;text-align:center;transition:all .15s;}
+.plat-opt:hover{border-color:var(--border2);}
+.plat-opt.selected{border-color:#0369a1;background:#f0f9ff;}
+.plat-opt .plat-icon{font-size:18px;margin-bottom:3px;}
+.plat-opt .plat-name{font-size:11px;font-weight:600;}
+.standard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.std-opt{padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
+.std-opt:hover{border-color:var(--border2);}
+.std-opt.selected{border-color:#7c3aed;background:#f5f3ff;}
+.std-opt .std-name{font-size:12px;font-weight:600;}
+.std-opt .std-desc{font-size:10px;color:var(--text3);margin-top:2px;}
+.start-btn{width:100%;padding:11px;font-size:13px;font-weight:600;background:#12131c;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:4px;}
+.start-btn:hover{background:#2a2c3e;}
+
+/* ── APP ── */
+#app{max-width:1020px;margin:0 auto;padding:24px 16px;}
+.audit-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;background:#f0f9ff;border:1.5px solid #7dd3fc;margin-bottom:13px;}
+.audit-badge span{font-size:12px;font-weight:600;color:#0369a1;letter-spacing:.04em;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px;}
+.title-block h1{font-size:19px;font-weight:600;}
+.title-block p{font-size:12px;color:var(--text3);margin-top:2px;}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;}
+.btn{padding:7px 13px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:#12131c;color:#fff;border-color:#12131c;}
+.btn-primary:hover{background:#2a2c3e;}
+.btn-danger{background:var(--fail-bg);color:var(--fail);border-color:var(--fail-bdr);}
+
+/* ── SCORE BAR ── */
+.score-bar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:13px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.score-big{font-size:36px;font-weight:700;line-height:1;white-space:nowrap;}
+.score-band{font-size:13px;font-weight:600;margin-top:2px;}
+.score-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.score-stacked{flex-shrink:0;}
+.score-track-wrap{flex:1;min-width:200px;}
+.score-segment-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px;margin-bottom:6px;}
+.seg{height:100%;border-radius:3px;transition:width .4s;}
+.seg-pass{background:var(--pass);}
+.seg-partial{background:var(--partial);}
+.seg-fail{background:var(--fail);}
+.seg-na{background:#d1d5db;}
+.score-legend{display:flex;gap:12px;flex-wrap:wrap;}
+.score-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.score-leg-dot{width:9px;height:9px;border-radius:50%;}
+.sev-summary{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+.sev-chip{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+.sev-crit{background:var(--crit-bg);color:var(--crit);}
+.sev-high{background:var(--high-bg);color:var(--high);}
+.sev-med{background:var(--med-bg);color:var(--med);}
+.sev-low{background:var(--low-bg);color:var(--low);}
+.sev-info{background:var(--info-bg);color:var(--info);}
+
+/* ── PROGRESS ── */
+.progress-wrap{margin-bottom:12px;}
+.progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:#0369a1;border-radius:2px;transition:width .3s;}
+.progress-label{font-size:11px;color:var(--text3);margin-top:3px;}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.tab{padding:8px 15px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab.active{color:var(--text);font-weight:500;border-bottom-color:#0369a1;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* ── SECTION CARDS ── */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;gap:10px;}
+.section-header:hover{background:var(--surface2);}
+.section-left{display:flex;align-items:center;gap:9px;}
+.section-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--surface2);flex-shrink:0;}
+.section-name{font-size:13px;font-weight:600;}
+.section-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.section-right{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.section-score-pill{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text3);white-space:nowrap;min-width:90px;text-align:center;}
+.chevron{font-size:10px;color:var(--text3);transition:transform .2s;}.chevron.open{transform:rotate(90deg);}
+.section-body{border-top:1px solid var(--border);padding:0 16px 12px;display:none;}.section-body.open{display:block;}
+
+/* ── CHECK ITEMS ── */
+.platform-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);margin-right:4px;vertical-align:middle;}
+.standard-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;margin-right:3px;vertical-align:middle;}
+.check-item{padding:10px 0;border-top:1px solid var(--border);}
+.check-item-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;}
+.check-label{font-size:13px;font-weight:500;line-height:1.4;}
+.check-sub{font-size:11px;color:var(--text3);margin-top:3px;line-height:1.4;}
+.check-tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;}
+.check-ref{font-size:10px;color:var(--text3);font-family:var(--mono);}
+.check-cmd{font-size:10px;font-family:var(--mono);background:var(--surface2);padding:2px 6px;border-radius:3px;color:var(--text2);margin-top:3px;display:inline-block;}
+.verdict-col{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.verdict-buttons{display:flex;gap:4px;}
+.vbtn{padding:5px 10px;border-radius:var(--radius-sm);border:1.5px solid transparent;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;transition:all .1s;}
+.vbtn:active{transform:scale(.94);}
+.vbtn-pass{background:var(--pass-bg);color:var(--pass);border-color:var(--pass-bdr);}
+.vbtn-partial{background:var(--partial-bg);color:var(--partial);border-color:var(--partial-bdr);}
+.vbtn-fail{background:var(--fail-bg);color:var(--fail);border-color:var(--fail-bdr);}
+.vbtn-na{background:var(--na-bg);color:var(--na);border-color:var(--na-bdr);}
+.vbtn-pass.sel{background:var(--pass);color:#fff;border-color:#15803d;}
+.vbtn-partial.sel{background:var(--partial);color:#fff;border-color:#b45309;}
+.vbtn-fail.sel{background:var(--fail);color:#fff;border-color:#b91c1c;}
+.vbtn-na.sel{background:#6b7280;color:#fff;border-color:#4b5563;}
+.sev-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap;letter-spacing:.03em;}
+.sev-CRITICAL{background:var(--crit-bg);color:var(--crit);}
+.sev-HIGH{background:var(--high-bg);color:var(--high);}
+.sev-MEDIUM{background:var(--med-bg);color:var(--med);}
+.sev-LOW{background:var(--low-bg);color:var(--low);}
+.sev-INFO{background:var(--info-bg);color:var(--info);}
+.evidence-toggle{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;margin-top:4px;}
+.evidence-wrap{margin-top:6px;display:none;}
+.evidence-wrap.vis{display:block;}
+.evidence-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
+.evidence-ta{width:100%;padding:6px 8px;font-size:11px;font-family:var(--mono);border:1px solid var(--border2);border-radius:var(--radius-sm);background:#f8f9fb;color:var(--text);resize:none;min-height:56px;}
+.finding-note-ta{width:100%;padding:5px 8px;font-size:11px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:none;min-height:38px;margin-top:4px;}
+
+/* ── SUMMARY ── */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;}
+.sum-mc{background:var(--surface2);border-radius:var(--radius-sm);padding:11px 13px;}
+.sum-lbl{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.sum-val{font-size:22px;font-weight:600;}
+.sum-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.sec-bars-wrap h3{font-size:13px;font-weight:600;margin-bottom:9px;}
+.dbar-row{display:grid;grid-template-columns:200px 1fr 44px;gap:10px;align-items:center;margin-bottom:7px;}
+.dbar-lbl{font-size:12px;color:var(--text2);}
+.dbar-track{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:4px;transition:width .3s;}
+.dbar-sc{font-size:12px;font-weight:600;text-align:right;}
+.findings-section h3{font-size:13px;font-weight:600;margin-bottom:9px;}
+.finding-row{display:flex;gap:9px;padding:8px 0;border-top:1px solid var(--border);align-items:flex-start;}
+.finding-text strong{font-size:13px;}
+.finding-text .finding-cat{font-size:11px;color:var(--text3);}
+
+/* ── MULTI-DEVICE ── */
+.multi-load-area{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
+.multi-load-area h3{font-size:14px;font-weight:600;margin-bottom:13px;}
+.device-slots{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.device-slot{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px dashed var(--border2);border-radius:var(--radius-sm);background:var(--surface2);}
+.device-slot.loaded{border-style:solid;border-color:#7dd3fc;background:#f0f9ff;}
+.slot-info{flex:1;}
+.slot-name{font-size:13px;font-weight:600;}
+.slot-meta{font-size:11px;color:var(--text3);}
+.slot-score{font-size:18px;font-weight:700;}
+.slot-actions{display:flex;gap:6px;align-items:center;}
+.slot-btn{padding:5px 10px;font-size:11px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;}
+.slot-btn:hover{background:var(--surface2);}
+.slot-clear{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;}
+input[type=file]{display:none;}
+.add-slot-btn{width:100%;padding:8px;font-size:12px;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text3);}
+.add-slot-btn:hover{background:var(--surface2);color:var(--text);}
+.multi-output{display:none;}.multi-output.visible{display:block;}
+.multi-device-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.multi-device-table th{text-align:left;padding:6px 10px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);}
+.multi-device-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.compliance-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+
+/* ── EXEC ── */
+.exec-hdr{text-align:center;padding:24px 0 18px;border-bottom:2px solid var(--border);margin-bottom:20px;}
+.exec-hdr h1{font-size:20px;font-weight:700;}
+.exec-hdr h2{font-size:13px;color:var(--text2);margin-top:3px;}
+.exec-meta{display:flex;gap:18px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.exec-meta span{font-size:12px;color:var(--text2);}
+.exec-scorecard{display:grid;grid-template-columns:auto 1fr;gap:18px;margin-bottom:20px;align-items:start;}
+.exec-score-box{padding:20px 24px;border-radius:var(--radius);border:2px solid var(--border);text-align:center;min-width:160px;}
+.exec-big{font-size:52px;font-weight:700;line-height:1;}
+.exec-band{font-size:14px;font-weight:600;margin-top:4px;}
+.exec-verdict{margin-top:10px;padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;}
+.exec-cats{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;}
+.exec-cats h3{font-size:13px;font-weight:600;margin-bottom:10px;}
+.exec-findings{margin-bottom:20px;}
+.exec-findings h2{font-size:15px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.efc{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:7px;break-inside:avoid;}
+.exec-detail{margin-bottom:20px;break-inside:avoid;}
+.exec-detail h2{font-size:14px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.etbl{width:100%;border-collapse:collapse;font-size:11px;}
+.etbl th{text-align:left;padding:5px 9px;background:var(--surface2);font-weight:600;font-size:10px;color:var(--text2);border-bottom:1px solid var(--border);}
+.etbl td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:top;}
+.verdict-chip{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;}
+.vc-pass{background:var(--pass-bg);color:var(--pass);}
+.vc-partial{background:var(--partial-bg);color:var(--partial);}
+.vc-fail{background:var(--fail-bg);color:var(--fail);}
+.vc-na{background:var(--na-bg);color:var(--na);}
+
+/* ── JSON ── */
+.json-area{width:100%;height:220px;font-family:var(--mono);font-size:11px;padding:10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:vertical;}
+.json-actions{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.load-section{margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+.load-section h3{font-size:13px;font-weight:600;margin-bottom:7px;}
+.file-drop{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:16px;text-align:center;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:8px;}
+.file-drop:hover{border-color:var(--border2);background:var(--surface2);}
+
+@media print{
+  body{background:#fff;font-size:11px;}
+  #app{padding:0;max-width:100%;}
+  .topbar .toolbar,.tabs,.tab-panel:not(#tab-exec),#setup-screen,.score-bar-wrap{display:none!important;}
+  #tab-exec{display:block!important;}
+  .section-card,.efc{break-inside:avoid;}
+  .verdict-chip{print-color-adjust:exact;-webkit-print-color-adjust:exact;}
+}
+@media(max-width:640px){
+  .exec-scorecard{grid-template-columns:1fr;}
+  .dbar-row{grid-template-columns:130px 1fr 36px;}
+  .platform-grid,.standard-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+<div class="setup-card">
+  <h2>Network Configuration Audit</h2>
+  <p>Configure device details, platform, and compliance standard before beginning the audit checklist.</p>
+
+  <div class="setup-section">
+    <h3>Device information</h3>
+    <div class="setup-grid">
+      <div class="setup-field"><label>Hostname</label><input id="s-hostname" placeholder="e.g. core-sw-01"></div>
+      <div class="setup-field"><label>IP address</label><input id="s-ip" placeholder="e.g. 10.1.1.1"></div>
+      <div class="setup-field"><label>Device role</label>
+        <select id="s-role">
+          <option value="">Select role...</option>
+          <option>Core Router</option><option>Distribution Switch</option><option>Access Switch</option>
+          <option>Firewall / Security Gateway</option><option>WAN Edge Router</option>
+          <option>Data Center Spine</option><option>Data Center Leaf</option>
+          <option>Out-of-Band Management</option><option>CBRS / LTE RAN Node</option>
+          <option>Linux / Net-SNMP Host</option><option>Other</option>
+        </select>
+      </div>
+      <div class="setup-field"><label>Software version</label><input id="s-version" placeholder="e.g. 17.9.3a"></div>
+      <div class="setup-field"><label>Auditor</label><input id="s-auditor" placeholder="Your name"></div>
+      <div class="setup-field"><label>Audit period</label><input id="s-period" placeholder="e.g. Q2 2025"></div>
+      <div class="setup-field" style="grid-column:1/-1"><label>Notes / context</label><textarea id="s-notes" placeholder="Deployment context, known issues, audit scope..." rows="2"></textarea></div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <h3>Platform — select all that apply to this device</h3>
+    <div class="platform-grid">
+      <div class="plat-opt" id="po-ios" onclick="togglePlat('ios')"><div class="plat-icon">🔷</div><div class="plat-name">Cisco IOS / IOS-XE</div></div>
+      <div class="plat-opt" id="po-nxos" onclick="togglePlat('nxos')"><div class="plat-icon">🔶</div><div class="plat-name">Cisco NX-OS</div></div>
+      <div class="plat-opt" id="po-junos" onclick="togglePlat('junos')"><div class="plat-icon">🟥</div><div class="plat-name">Juniper JunOS</div></div>
+      <div class="plat-opt" id="po-linux" onclick="togglePlat('linux')"><div class="plat-icon">🐧</div><div class="plat-name">Linux / Net-SNMP</div></div>
+      <div class="plat-opt selected" id="po-generic" onclick="togglePlat('generic')"><div class="plat-icon">🌐</div><div class="plat-name">Vendor-Agnostic</div></div>
+      <div class="plat-opt" id="po-fw" onclick="togglePlat('fw')"><div class="plat-icon">🔥</div><div class="plat-name">Firewall / ASA / FTD</div></div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <h3>Compliance standard</h3>
+    <div class="standard-grid">
+      <div class="std-opt selected" id="so-cis" onclick="selectStd('cis')"><div class="std-name">CIS Benchmark</div><div class="std-desc">Center for Internet Security</div></div>
+      <div class="std-opt" id="so-nist" onclick="selectStd('nist')"><div class="std-name">NIST 800-53 / CSF</div><div class="std-desc">NIST framework controls</div></div>
+      <div class="std-opt" id="so-stig" onclick="selectStd('stig')"><div class="std-name">DISA STIG</div><div class="std-desc">DoD Security Technical IG</div></div>
+      <div class="std-opt" id="so-internal" onclick="selectStd('internal')"><div class="std-name">Internal Baseline</div><div class="std-desc">Custom org standard</div></div>
+      <div class="std-opt" id="so-all" onclick="selectStd('all')"><div class="std-name">All / Multi-standard</div><div class="std-desc">Show all references</div></div>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startAudit()">Begin audit checklist</button>
+</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="audit-badge"><span id="audit-badge-text">CONFIGURATION AUDIT</span></div>
+  <div class="topbar">
+    <div class="title-block">
+      <h1 id="app-title">Device Audit</h1>
+      <p id="app-sub">Loading...</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="toolbar">
+        <button class="btn" onclick="switchTab('exec')">📋 Report</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+        <button class="btn" onclick="exportAudit()">↓ Export JSON</button>
+        <button class="btn btn-danger" onclick="resetAudit()">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="score-bar-wrap" id="score-bar">
+    <div class="score-stacked">
+      <div class="score-big" id="score-pct" style="color:#0369a1">—%</div>
+      <div class="score-band" id="score-band">Not started</div>
+      <div class="score-meta" id="score-meta">0 of 0 checks completed</div>
+    </div>
+    <div class="score-track-wrap">
+      <div class="score-segment-bar" id="seg-bar"></div>
+      <div class="score-legend">
+        <div class="score-leg-item"><div class="score-leg-dot" style="background:var(--pass)"></div>Pass</div>
+        <div class="score-leg-item"><div class="score-leg-dot" style="background:var(--partial)"></div>Partial</div>
+        <div class="score-leg-item"><div class="score-leg-dot" style="background:var(--fail)"></div>Fail</div>
+        <div class="score-leg-item"><div class="score-leg-dot" style="background:#d1d5db"></div>N/A</div>
+      </div>
+    </div>
+    <div class="sev-summary" id="sev-summary"></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 of 0 checks reviewed</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="checklist">Checklist</button>
+    <button class="tab" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="exec">Report</button>
+    <button class="tab" data-tab="multi">Multi-Device</button>
+    <button class="tab" data-tab="io">Export / Import</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-checklist"><div id="sections-container"></div></div>
+
+  <div class="tab-panel" id="tab-summary">
+    <div class="sum-grid" id="sum-metrics"></div>
+    <div class="sec-bars-wrap" style="margin-bottom:16px"><h3>Section compliance</h3><div id="sum-sec-bars"></div></div>
+    <div class="findings-section"><h3>Findings by severity</h3><div id="sum-findings"></div></div>
+  </div>
+
+  <div class="tab-panel" id="tab-exec"><div id="exec-content"></div></div>
+
+  <div class="tab-panel" id="tab-multi">
+    <div class="multi-load-area">
+      <h3>Multi-device compliance summary</h3>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:13px">Load exported audit JSON files from multiple devices to compare compliance posture across your fleet.</p>
+      <div class="device-slots" id="device-slots"></div>
+      <button class="add-slot-btn" onclick="addDeviceSlot()">+ Add device</button>
+      <button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="runMultiSummary()">Generate fleet summary</button>
+    </div>
+    <div class="multi-output" id="multi-output"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-io">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px">Export audit as JSON</h3>
+    <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+    <div class="json-actions">
+      <button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button>
+      <button class="btn" onclick="copyJSON()">Copy to clipboard</button>
+      <button class="btn" onclick="downloadJSON()">↓ Download .json</button>
+    </div>
+    <div class="load-section">
+      <h3>Load saved audit</h3>
+      <div class="file-drop" onclick="document.getElementById('fi-load').click()">Click to load a saved audit JSON<input type="file" id="fi-load" accept=".json" onchange="loadFromFile(event)"></div>
+      <div id="load-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── AUDIT METADATA ──
+let auditMeta={hostname:'',ip:'',role:'',version:'',auditor:'',period:'',notes:''};
+let activePlatforms=new Set(['generic']);
+let activeStandard='cis';
+const verdicts={};  // checkId -> 'pass'|'partial'|'fail'|'na'|''
+const evidence={};  // checkId -> string
+const findingNotes={};  // checkId -> string
+let multiSlots=[];  // array of loaded audit payloads
+
+// ── CHECKLIST DATA ──
+// Severity: CRITICAL, HIGH, MEDIUM, LOW, INFO
+// Platforms: generic, ios, nxos, junos, linux, fw  (empty array = all)
+// Standards refs: cis, nist, stig, internal
+const SECTIONS=[
+  {id:"aaa",name:"Authentication, Authorization & Accounting",icon:"🔑",sub:"AAA configuration, privilege levels, and access controls",checks:[
+    {id:"aaa_local_only",    sev:"HIGH",    plat:[],         std:{cis:"CIS L1 1.1",nist:"AC-2, IA-2",stig:"NET-NAC-001"},
+     label:"Local fallback account limited", sub:"Only one local account configured as emergency fallback; not used for routine access",
+     cmd:"show running-config | include username"},
+    {id:"aaa_new_model",     sev:"CRITICAL",plat:["ios","nxos"],std:{cis:"CIS L1 1.2",nist:"IA-2",stig:"NET-AAA-001"},
+     label:"AAA new-model enabled",          sub:"'aaa new-model' configured; not relying on line password authentication",
+     cmd:"show running-config | include aaa new-model"},
+    {id:"aaa_radius_tacacs",  sev:"HIGH",   plat:[],         std:{cis:"CIS L1 1.3",nist:"IA-2, IA-8",stig:"NET-AAA-002"},
+     label:"RADIUS or TACACS+ configured",   sub:"Centralized AAA server configured for authentication; not local-only",
+     cmd:"show running-config | section aaa|radius|tacacs"},
+    {id:"aaa_priv_levels",   sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L2 1.4",nist:"AC-6",stig:"NET-AAA-003"},
+     label:"Privilege levels defined",        sub:"Privilege level 1 and 15 separation enforced; no unnecessary level 15 accounts",
+     cmd:"show running-config | include privilege"},
+    {id:"aaa_login_block",   sev:"HIGH",    plat:["ios"],    std:{cis:"CIS L1 1.5",nist:"AC-7",stig:"NET-AAA-004"},
+     label:"Login block-for configured",      sub:"'login block-for' configured to lock out after failed attempts",
+     cmd:"show running-config | include login block"},
+    {id:"aaa_junos_rbac",    sev:"HIGH",    plat:["junos"],  std:{cis:"CIS L1 1.3",nist:"AC-2, AC-6",stig:"NET-AAA-003"},
+     label:"JunOS login classes defined",     sub:"Login classes restrict operational access; not using super-user for all accounts",
+     cmd:"show configuration system login"},
+    {id:"aaa_linux_sudo",    sev:"HIGH",    plat:["linux"],  std:{cis:"CIS L1 5.1",nist:"AC-6",stig:"RHEL-05"},
+     label:"sudo configured; root login disabled",sub:"Root login via SSH disabled; sudo used for privilege escalation with logging",
+     cmd:"grep PermitRootLogin /etc/ssh/sshd_config"},
+  ]},
+  {id:"ssh",name:"Remote Access & SSH",icon:"🔐",sub:"SSH hardening, Telnet removal, and management access controls",checks:[
+    {id:"ssh_telnet_off",    sev:"CRITICAL",plat:[],         std:{cis:"CIS L1 2.1",nist:"SC-8",stig:"NET-SSH-001"},
+     label:"Telnet disabled on all lines",    sub:"No 'transport input telnet' or equivalent; Telnet completely disabled",
+     cmd:"show running-config | include transport input"},
+    {id:"ssh_v2_only",       sev:"HIGH",    plat:[],         std:{cis:"CIS L1 2.2",nist:"SC-8, IA-7",stig:"NET-SSH-002"},
+     label:"SSH version 2 only",              sub:"SSHv1 disabled; only SSHv2 permitted",
+     cmd:"show ip ssh | include SSH version"},
+    {id:"ssh_timeout",       sev:"MEDIUM",  plat:[],         std:{cis:"CIS L1 2.3",nist:"AC-11",stig:"NET-SSH-003"},
+     label:"SSH idle timeout configured",     sub:"exec-timeout ≤ 10 minutes on VTY lines",
+     cmd:"show running-config | section line vty"},
+    {id:"ssh_acl",           sev:"HIGH",    plat:[],         std:{cis:"CIS L1 2.4",nist:"AC-17, SC-7",stig:"NET-SSH-004"},
+     label:"VTY access restricted by ACL",    sub:"VTY lines have access-class restricting SSH source addresses",
+     cmd:"show running-config | section line vty"},
+    {id:"ssh_modulus",       sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L1 2.5",nist:"SC-12",stig:"NET-SSH-005"},
+     label:"RSA key size ≥ 2048 bits",        sub:"Crypto key generate rsa modulus 2048 or higher",
+     cmd:"show crypto key mypubkey rsa"},
+    {id:"ssh_login_banner",  sev:"LOW",     plat:[],         std:{cis:"CIS L1 2.6",nist:"AC-8",stig:"NET-SSH-006"},
+     label:"Login warning banner configured", sub:"MOTD/login banner present with authorized-use warning",
+     cmd:"show running-config | section banner"},
+    {id:"ssh_junos_ssh_only",sev:"HIGH",    plat:["junos"],  std:{cis:"CIS L1 2.2",nist:"SC-8",stig:"NET-SSH-002"},
+     label:"JunOS: SSH-only; Telnet service disabled",sub:"'services telnet' not present in configuration",
+     cmd:"show configuration system services"},
+    {id:"ssh_linux_algos",   sev:"MEDIUM",  plat:["linux"],  std:{cis:"CIS L1 5.2",nist:"SC-8, IA-7",stig:"RHEL-SSH-01"},
+     label:"Weak SSH ciphers and MACs disabled",sub:"Only strong ciphers (aes256-ctr etc.) and MACs (hmac-sha2-256+) permitted",
+     cmd:"grep -i 'Ciphers\\|MACs' /etc/ssh/sshd_config"},
+  ]},
+  {id:"snmp",name:"SNMP Configuration",icon:"📊",sub:"SNMP version, community strings, and trap receiver configuration",checks:[
+    {id:"snmp_v1v2_off",     sev:"CRITICAL",plat:[],         std:{cis:"CIS L1 3.1",nist:"SC-8, IA-3",stig:"NET-SNMP-001"},
+     label:"SNMPv1 and SNMPv2c disabled",     sub:"No 'snmp-server community' strings configured; only SNMPv3",
+     cmd:"show running-config | include snmp-server community"},
+    {id:"snmp_v3",           sev:"HIGH",    plat:[],         std:{cis:"CIS L1 3.2",nist:"SC-8, IA-3",stig:"NET-SNMP-002"},
+     label:"SNMPv3 with auth and priv configured",sub:"SNMPv3 users configured with authPriv (SHA + AES); no noAuthNoPriv",
+     cmd:"show snmp user"},
+    {id:"snmp_acl",          sev:"HIGH",    plat:[],         std:{cis:"CIS L1 3.3",nist:"SC-7, AC-17",stig:"NET-SNMP-003"},
+     label:"SNMP access restricted by ACL",   sub:"SNMP community or group restricted to NMS IP addresses via access list",
+     cmd:"show running-config | include snmp-server"},
+    {id:"snmp_traps",        sev:"MEDIUM",  plat:[],         std:{cis:"CIS L2 3.4",nist:"AU-12, SI-4",stig:"NET-SNMP-004"},
+     label:"SNMP trap receiver configured",   sub:"Trap destinations configured and pointing to authorized NMS/SIEM",
+     cmd:"show running-config | include snmp-server host"},
+    {id:"snmp_view",         sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L2 3.5",nist:"AC-3",stig:"NET-SNMP-005"},
+     label:"SNMP view restricts MIB access",  sub:"SNMP view defined limiting accessible OIDs to required scope",
+     cmd:"show running-config | include snmp-server view"},
+    {id:"snmp_ro_only",      sev:"HIGH",    plat:[],         std:{cis:"CIS L1 3.6",nist:"AC-3",stig:"NET-SNMP-006"},
+     label:"SNMP write access disabled",      sub:"No SNMP write (RW) community or group configured",
+     cmd:"show running-config | include snmp-server community"},
+  ]},
+  {id:"ntp",name:"NTP & Time Synchronization",icon:"🕐",sub:"Time source authentication, stratum, and consistency",checks:[
+    {id:"ntp_configured",    sev:"HIGH",    plat:[],         std:{cis:"CIS L1 4.1",nist:"AU-8",stig:"NET-NTP-001"},
+     label:"NTP server(s) configured",        sub:"At least two NTP servers configured; not using default or untrusted sources",
+     cmd:"show ntp associations"},
+    {id:"ntp_auth",          sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L1 4.2",nist:"AU-8, SC-13",stig:"NET-NTP-002"},
+     label:"NTP authentication enabled",      sub:"NTP authentication keys configured; server association uses authenticated key",
+     cmd:"show running-config | section ntp"},
+    {id:"ntp_synced",        sev:"HIGH",    plat:[],         std:{cis:"CIS L1 4.1",nist:"AU-8",stig:"NET-NTP-001"},
+     label:"NTP synchronized and stratum ≤ 3",sub:"show ntp status shows synchronized; stratum within acceptable range",
+     cmd:"show ntp status"},
+    {id:"ntp_restrict",      sev:"LOW",     plat:["linux"],  std:{cis:"CIS L1 4.3",nist:"AU-8",stig:"RHEL-NTP-01"},
+     label:"NTP restrict configured (Linux)",  sub:"ntpd/chrony restrict directive limits who can query time service",
+     cmd:"grep restrict /etc/ntp.conf"},
+  ]},
+  {id:"logging",name:"Logging & Audit Trail",icon:"📝",sub:"Syslog configuration, log level, and audit trail completeness",checks:[
+    {id:"log_syslog",        sev:"HIGH",    plat:[],         std:{cis:"CIS L1 5.1",nist:"AU-2, AU-9",stig:"NET-LOG-001"},
+     label:"Syslog server configured",        sub:"At least one remote syslog destination configured; not logging locally only",
+     cmd:"show running-config | include logging host"},
+    {id:"log_level",         sev:"MEDIUM",  plat:[],         std:{cis:"CIS L1 5.2",nist:"AU-2",stig:"NET-LOG-002"},
+     label:"Log severity level ≥ informational",sub:"Logging level set to informational (6) or debugging (7); not errors-only",
+     cmd:"show running-config | include logging trap"},
+    {id:"log_timestamps",    sev:"MEDIUM",  plat:[],         std:{cis:"CIS L1 5.3",nist:"AU-8",stig:"NET-LOG-003"},
+     label:"Timestamps on log messages",      sub:"service timestamps log datetime msec localtime or UTC configured",
+     cmd:"show running-config | include service timestamps"},
+    {id:"log_aaa_accounting",sev:"HIGH",    plat:[],         std:{cis:"CIS L1 5.4",nist:"AU-2, AC-2",stig:"NET-LOG-004"},
+     label:"AAA command accounting enabled",  sub:"All exec and config commands logged via AAA accounting",
+     cmd:"show running-config | include aaa accounting"},
+    {id:"log_config_changes",sev:"HIGH",    plat:["ios","nxos"],std:{cis:"CIS L1 5.5",nist:"AU-12, CM-3",stig:"NET-LOG-005"},
+     label:"Configuration change logging",    sub:"'archive log config' or equivalent captures all configuration changes",
+     cmd:"show running-config | section archive"},
+    {id:"log_junos_syslog",  sev:"HIGH",    plat:["junos"],  std:{cis:"CIS L1 5.1",nist:"AU-2",stig:"NET-LOG-001"},
+     label:"JunOS: syslog host and facility defined",sub:"system syslog host configured with appropriate facility and severity",
+     cmd:"show configuration system syslog"},
+    {id:"log_linux_rsyslog", sev:"HIGH",    plat:["linux"],  std:{cis:"CIS L1 4.1",nist:"AU-2",stig:"RHEL-LOG-01"},
+     label:"rsyslog/journald forwarding to remote",sub:"Remote log forwarding configured; logs not stored locally only",
+     cmd:"grep -r '@@\\|@' /etc/rsyslog.conf /etc/rsyslog.d/"},
+  ]},
+  {id:"mgmt",name:"Management Plane Protection",icon:"🛡️",sub:"Control plane policing, management VRF, and OOB access",checks:[
+    {id:"mgmt_copp",         sev:"HIGH",    plat:["ios","nxos"],std:{cis:"CIS L1 6.1",nist:"SC-5, SI-3",stig:"NET-MGMT-001"},
+     label:"CoPP / Control Plane Policing",   sub:"CoPP policy configured and applied; critical protocol rates protected",
+     cmd:"show policy-map control-plane"},
+    {id:"mgmt_vrf",          sev:"MEDIUM",  plat:[],         std:{cis:"CIS L2 6.2",nist:"SC-7, AC-17",stig:"NET-MGMT-002"},
+     label:"Management VRF configured",       sub:"Management traffic isolated in dedicated VRF; not in global routing table",
+     cmd:"show vrf | include Mgmt"},
+    {id:"mgmt_oob",          sev:"MEDIUM",  plat:[],         std:{cis:"CIS L2 6.3",nist:"SC-7",stig:"NET-MGMT-003"},
+     label:"Out-of-band management path",     sub:"MGMT interface configured for OOB access; not dependent on in-band routing",
+     cmd:"show interfaces Management0"},
+    {id:"mgmt_unused_iface", sev:"MEDIUM",  plat:[],         std:{cis:"CIS L1 6.4",nist:"CM-7",stig:"NET-MGMT-004"},
+     label:"Unused interfaces shut down",     sub:"All unused interfaces in shutdown state; no orphaned active interfaces",
+     cmd:"show interfaces status | include notconnect"},
+    {id:"mgmt_no_ip_http",   sev:"HIGH",    plat:["ios"],    std:{cis:"CIS L1 6.5",nist:"CM-7, SC-8",stig:"NET-MGMT-005"},
+     label:"HTTP server disabled",            sub:"'no ip http server' and 'no ip http secure-server' (if not required)",
+     cmd:"show running-config | include ip http"},
+    {id:"mgmt_no_cdp_edge",  sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L1 6.6",nist:"CM-7",stig:"NET-MGMT-006"},
+     label:"CDP/LLDP disabled on edge/external interfaces",sub:"CDP and LLDP disabled on all interfaces facing untrusted networks",
+     cmd:"show running-config | include cdp|lldp"},
+    {id:"mgmt_nxos_feature", sev:"MEDIUM",  plat:["nxos"],   std:{cis:"CIS L1 6.7",nist:"CM-7",stig:"NET-MGMT-007"},
+     label:"NX-OS: unnecessary features disabled",sub:"Only required features enabled; no orphaned feature lines",
+     cmd:"show feature | include enabled"},
+    {id:"mgmt_junos_rescue", sev:"MEDIUM",  plat:["junos"],  std:{cis:"CIS L2 6.3",nist:"CP-10",stig:"NET-MGMT-008"},
+     label:"JunOS: rescue configuration saved",sub:"'request system configuration rescue save' executed; rollback recovery path exists",
+     cmd:"show system configuration rescue"},
+    {id:"mgmt_fw_rules",     sev:"HIGH",    plat:["fw"],     std:{cis:"CIS L1 6.1",nist:"SC-7",stig:"NET-FW-001"},
+     label:"Firewall: deny-all default rule at end",sub:"Implicit or explicit deny-any-any rule at end of all ACL/policy chains",
+     cmd:"show access-list | tail"},
+    {id:"mgmt_fw_log",       sev:"HIGH",    plat:["fw"],     std:{cis:"CIS L1 6.2",nist:"AU-2, SC-7",stig:"NET-FW-002"},
+     label:"Firewall: deny rule logging enabled",sub:"All deny/drop actions generate log entries for SIEM/syslog",
+     cmd:"show running-config access-list | include log"},
+  ]},
+  {id:"routing",name:"Routing Protocol Security",icon:"🗺️",sub:"Routing authentication, passive interfaces, and prefix filtering",checks:[
+    {id:"rt_ospf_auth",      sev:"HIGH",    plat:[],         std:{cis:"CIS L1 7.1",nist:"SC-8, IA-3",stig:"NET-RT-001"},
+     label:"OSPF MD5/SHA authentication",     sub:"All OSPF areas configured with message-digest or HMAC-SHA authentication",
+     cmd:"show running-config | section router ospf"},
+    {id:"rt_bgp_auth",       sev:"HIGH",    plat:[],         std:{cis:"CIS L1 7.2",nist:"SC-8, IA-3",stig:"NET-RT-002"},
+     label:"BGP MD5 neighbor authentication", sub:"All BGP peer sessions configured with password authentication",
+     cmd:"show running-config | section router bgp"},
+    {id:"rt_passive_iface",  sev:"MEDIUM",  plat:[],         std:{cis:"CIS L1 7.3",nist:"CM-7",stig:"NET-RT-003"},
+     label:"Passive interfaces configured",   sub:"All non-routing interfaces marked passive in routing process",
+     cmd:"show running-config | include passive-interface"},
+    {id:"rt_prefix_filter",  sev:"HIGH",    plat:[],         std:{cis:"CIS L1 7.4",nist:"SC-5, SI-3",stig:"NET-RT-004"},
+     label:"BGP prefix lists / route filters",sub:"Inbound and outbound prefix-lists or route-maps on all BGP sessions",
+     cmd:"show running-config | section neighbor"},
+    {id:"rt_max_prefix",     sev:"MEDIUM",  plat:[],         std:{cis:"CIS L1 7.5",nist:"SC-5",stig:"NET-RT-005"},
+     label:"BGP maximum-prefix configured",   sub:"maximum-prefix configured on all eBGP sessions to limit route injection attacks",
+     cmd:"show running-config | include maximum-prefix"},
+    {id:"rt_ospf_stub",      sev:"LOW",     plat:[],         std:{cis:"CIS L2 7.6",nist:"CM-7",stig:"NET-RT-006"},
+     label:"OSPF stub/NSSA areas where applicable",sub:"Non-transit OSPF areas configured as stub or NSSA to limit LSA flooding",
+     cmd:"show ip ospf | include area"},
+  ]},
+  {id:"acl",name:"Access Control Lists",icon:"🚧",sub:"Infrastructure ACLs, anti-spoofing, and ICMP control",checks:[
+    {id:"acl_infra",         sev:"HIGH",    plat:[],         std:{cis:"CIS L1 8.1",nist:"SC-7, AC-4",stig:"NET-ACL-001"},
+     label:"Infrastructure ACL on edge",      sub:"iACL protecting device itself from unauthorized management access at edge",
+     cmd:"show ip access-lists | include permit|deny"},
+    {id:"acl_antispoofing",  sev:"HIGH",    plat:[],         std:{cis:"CIS L1 8.2",nist:"SC-5, SI-3",stig:"NET-ACL-002"},
+     label:"Anti-spoofing ACL / uRPF",        sub:"Unicast RPF or ACL preventing source-address spoofing on customer/external interfaces",
+     cmd:"show running-config | include ip verify"},
+    {id:"acl_icmp_limit",    sev:"LOW",     plat:[],         std:{cis:"CIS L2 8.3",nist:"CM-7",stig:"NET-ACL-003"},
+     label:"ICMP rate limiting / ICMP control",sub:"ICMP redirects and unreachables rate-limited or disabled on external interfaces",
+     cmd:"show running-config | include no ip icmp|ip icmp rate"},
+    {id:"acl_deny_bogons",   sev:"MEDIUM",  plat:[],         std:{cis:"CIS L2 8.4",nist:"SC-5",stig:"NET-ACL-004"},
+     label:"Bogon / martian address filtering",sub:"RFC1918, loopback, and other bogon prefixes filtered inbound at edge",
+     cmd:"show ip access-lists BOGON"},
+  ]},
+  {id:"crypto",name:"Cryptography & Certificate Management",icon:"🔒",sub:"Cipher strength, certificate management, and TLS configuration",checks:[
+    {id:"cry_no_weak",       sev:"HIGH",    plat:[],         std:{cis:"CIS L1 9.1",nist:"SC-13, IA-7",stig:"NET-CRY-001"},
+     label:"Weak ciphers disabled (DES/3DES/MD5)",sub:"DES, 3DES, RC4, and MD5 authentication disabled where replacements available",
+     cmd:"show running-config | include encryption|integrity"},
+    {id:"cry_pki",           sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L2 9.2",nist:"SC-12, IA-5",stig:"NET-CRY-002"},
+     label:"PKI trustpoint configured",       sub:"CA trustpoint configured for certificate-based authentication where applicable",
+     cmd:"show crypto pki trustpoints"},
+    {id:"cry_macsec",        sev:"INFO",    plat:[],         std:{cis:"CIS L2 9.3",nist:"SC-8",stig:"NET-CRY-003"},
+     label:"MACsec enabled on sensitive links",sub:"IEEE 802.1AE MACsec enabled on inter-switch or campus uplink links where supported",
+     cmd:"show macsec summary"},
+    {id:"cry_fips",          sev:"INFO",    plat:["ios","nxos"],std:{cis:"CIS L2 9.4",nist:"SC-13",stig:"NET-CRY-004"},
+     label:"FIPS mode enabled (if applicable)",sub:"FIPS 140-2 mode enabled where compliance required",
+     cmd:"show fips status"},
+  ]},
+  {id:"firmware",name:"Software & Patch Status",icon:"💾",sub:"Firmware currency, CVE exposure, and software integrity",checks:[
+    {id:"fw_recommended",    sev:"HIGH",    plat:[],         std:{cis:"CIS L1 10.1",nist:"SI-2, CM-6",stig:"NET-FW-010"},
+     label:"Running recommended/current release",sub:"Software version is vendor-recommended or latest stable; not first-GA",
+     cmd:"show version | include Version"},
+    {id:"fw_no_critical_cve",sev:"CRITICAL",plat:[],         std:{cis:"CIS L1 10.2",nist:"SI-2, RA-5",stig:"NET-FW-011"},
+     label:"No critical/high CVEs on running version",sub:"Running version checked against vendor security advisories; no unpatched critical CVEs",
+     cmd:"(cross-reference vendor advisory portal)"},
+    {id:"fw_md5_verify",     sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L1 10.3",nist:"SI-7",stig:"NET-FW-012"},
+     label:"Image integrity verified (MD5/SHA)",sub:"Installed image hash matches vendor-published checksum",
+     cmd:"verify /sha512 flash:image.bin"},
+    {id:"fw_secure_boot",    sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L2 10.4",nist:"SI-7, CM-6",stig:"NET-FW-013"},
+     label:"Secure boot enabled",             sub:"boot integrity visibility or secure boot chain configured",
+     cmd:"show platform integrity"},
+    {id:"fw_linux_updates",  sev:"HIGH",    plat:["linux"],  std:{cis:"CIS L1 1.9",nist:"SI-2",stig:"RHEL-PKG-01"},
+     label:"OS packages up to date",          sub:"No critical security updates outstanding; yum/apt security updates applied",
+     cmd:"yum check-update --security || apt list --upgradable 2>/dev/null"},
+  ]},
+  {id:"resilience",name:"Resilience & Availability",icon:"⚡",sub:"Redundancy, spanning tree hardening, and storm control",checks:[
+    {id:"res_stp_portfast",  sev:"HIGH",    plat:["ios","nxos"],std:{cis:"CIS L1 11.1",nist:"CP-8",stig:"NET-RES-001"},
+     label:"PortFast only on access ports; not trunk",sub:"spanning-tree portfast enabled on access-only ports; never on trunk/uplink ports",
+     cmd:"show running-config | include spanning-tree portfast"},
+    {id:"res_bpduguard",     sev:"HIGH",    plat:["ios","nxos"],std:{cis:"CIS L1 11.2",nist:"CP-8, SI-3",stig:"NET-RES-002"},
+     label:"BPDU Guard on PortFast ports",    sub:"spanning-tree bpduguard enable on all PortFast interfaces",
+     cmd:"show spanning-tree summary | include Bpduguard"},
+    {id:"res_rootguard",     sev:"HIGH",    plat:["ios","nxos"],std:{cis:"CIS L1 11.3",nist:"CP-8",stig:"NET-RES-003"},
+     label:"Root Guard on non-root uplinks",  sub:"spanning-tree guard root on all ports where root bridge should never be received",
+     cmd:"show running-config | include spanning-tree guard root"},
+    {id:"res_storm_ctrl",    sev:"MEDIUM",  plat:["ios","nxos"],std:{cis:"CIS L1 11.4",nist:"CP-8, SC-5",stig:"NET-RES-004"},
+     label:"Storm control configured",        sub:"storm-control broadcast/multicast/unicast thresholds set on access interfaces",
+     cmd:"show storm-control"},
+    {id:"res_hsrp_auth",     sev:"MEDIUM",  plat:["ios"],    std:{cis:"CIS L2 11.5",nist:"SC-8",stig:"NET-RES-005"},
+     label:"HSRP/VRRP authentication",        sub:"HSRP or VRRP groups configured with MD5 authentication",
+     cmd:"show standby | include Authentication"},
+    {id:"res_lacp_mode",     sev:"LOW",     plat:["ios","nxos"],std:{cis:"CIS L2 11.6",nist:"CP-8",stig:"NET-RES-006"},
+     label:"LACP mode active (not on/passive both ends)",sub:"Port-channel configured with LACP active/passive; not static 'on' mode for critical uplinks",
+     cmd:"show etherchannel summary"},
+  ]},
+];
+
+// ── SETUP ──
+function togglePlat(p){
+  if(activePlatforms.has(p)){if(activePlatforms.size>1)activePlatforms.delete(p);}
+  else activePlatforms.add(p);
+  document.querySelectorAll('.plat-opt').forEach(el=>{
+    const id=el.id.replace('po-','');
+    el.classList.toggle('selected',activePlatforms.has(id));
+  });
+}
+function selectStd(s){
+  activeStandard=s;
+  document.querySelectorAll('.std-opt').forEach(el=>el.classList.toggle('selected',el.id===`so-${s}`));
+}
+
+function startAudit(){
+  const hostname=document.getElementById('s-hostname').value.trim();
+  if(!hostname){alert('Enter a hostname before starting.');return;}
+  auditMeta={
+    hostname,ip:document.getElementById('s-ip').value,
+    role:document.getElementById('s-role').value,
+    version:document.getElementById('s-version').value,
+    auditor:document.getElementById('s-auditor').value,
+    period:document.getElementById('s-period').value,
+    notes:document.getElementById('s-notes').value,
+    platforms:[...activePlatforms],standard:activeStandard,
+  };
+  // init verdicts
+  getActiveChecks().forEach(c=>{verdicts[c.id]='';evidence[c.id]='';findingNotes[c.id]='';});
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('audit-badge-text').textContent=`${auditMeta.platforms.map(p=>p.toUpperCase()).join(' · ')} AUDIT — ${auditMeta.standard.toUpperCase()}`;
+  document.getElementById('app-title').textContent=`${hostname}${auditMeta.ip?' ('+auditMeta.ip+')':''}`;
+  document.getElementById('app-sub').textContent=`${auditMeta.role||'Network Device'}${auditMeta.version?' · '+auditMeta.version:''}${auditMeta.period?' · '+auditMeta.period:''}`;
+  renderSections();
+  updateScoreBar();
+  initMultiSlots();
+}
+
+// ── CHECK FILTERING ──
+function checkApplies(check){
+  if(check.plat.length===0)return true;
+  return check.plat.some(p=>activePlatforms.has(p));
+}
+function getActiveChecks(){return SECTIONS.flatMap(s=>s.checks.filter(c=>checkApplies(c)));}
+function getSectionChecks(sec){return sec.checks.filter(c=>checkApplies(c));}
+
+// ── SCORING ──
+function calcScore(){
+  const checks=getActiveChecks();
+  let pass=0,partial=0,fail=0,na=0;
+  checks.forEach(c=>{
+    const v=verdicts[c.id];
+    if(v==='pass')pass++;else if(v==='partial')partial++;else if(v==='fail')fail++;else if(v==='na')na++;
+  });
+  const applicable=checks.length-na;
+  const score=applicable>0?Math.round(((pass+partial*0.5)/applicable)*100):null;
+  return{pass,partial,fail,na,total:checks.length,applicable,score};
+}
+
+function scoreBand(s){
+  if(s===null)return{label:'Not started',color:'#0369a1'};
+  if(s>=90)return{label:'Compliant',color:'#16a34a'};
+  if(s>=75)return{label:'Largely compliant',color:'#16a34a'};
+  if(s>=60)return{label:'Partial compliance',color:'#d97706'};
+  if(s>=40)return{label:'Significant gaps',color:'#dc2626'};
+  return{label:'Non-compliant',color:'#dc2626'};
+}
+
+function sevCounts(){
+  const counts={CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,INFO:0};
+  getActiveChecks().forEach(c=>{if(verdicts[c.id]==='fail'||verdicts[c.id]==='partial')counts[c.sev]=(counts[c.sev]||0)+1;});
+  return counts;
+}
+
+function updateScoreBar(){
+  const {pass,partial,fail,na,total,applicable,score}=calcScore();
+  const band=scoreBand(score);
+  document.getElementById('score-pct').textContent=score!==null?score+'%':'—%';
+  document.getElementById('score-pct').style.color=band.color;
+  document.getElementById('score-band').textContent=band.label;
+  document.getElementById('score-band').style.color=band.color;
+  document.getElementById('score-meta').textContent=`${pass} pass · ${partial} partial · ${fail} fail · ${na} N/A (${applicable} applicable)`;
+  // segment bar
+  const sb=document.getElementById('seg-bar');
+  if(applicable>0){
+    const pPct=pass/applicable*100,ptPct=partial/applicable*100,fPct=fail/applicable*100,naPct=na/total*100;
+    sb.innerHTML=`${pass?`<div class="seg seg-pass" style="width:${pPct}%"></div>`:''}${partial?`<div class="seg seg-partial" style="width:${ptPct}%"></div>`:''}${fail?`<div class="seg seg-fail" style="width:${fPct}%"></div>`:''}${na?`<div class="seg seg-na" style="width:${naPct}%"></div>`:''}`;
+  }else{sb.innerHTML=`<div style="width:100%;height:100%;background:var(--surface2);border-radius:6px"></div>`;}
+  // sev summary
+  const sc=sevCounts();
+  const sevHtml=Object.entries(sc).filter(([,v])=>v>0).map(([k,v])=>`<div class="sev-chip sev-${k.toLowerCase()}">${k}: ${v}</div>`).join('');
+  document.getElementById('sev-summary').innerHTML=sevHtml;
+  // progress
+  const reviewed=Object.values(verdicts).filter(v=>v!=='').length;
+  const tot=getActiveChecks().length;
+  document.getElementById('prog-fill').style.width=Math.round(reviewed/tot*100)+'%';
+  document.getElementById('prog-label').textContent=`${reviewed} of ${tot} checks reviewed`;
+}
+
+function setVerdict(cid,v){
+  verdicts[cid]=v;
+  ['pass','partial','fail','na'].forEach(vt=>{
+    const btn=document.getElementById(`vbtn-${cid}-${vt}`);
+    if(btn)btn.className=`vbtn vbtn-${vt}${v===vt?' sel':''}`;
+  });
+  // show/hide evidence field prompt
+  const ew=document.getElementById(`ev-${cid}`);
+  if(ew){if(v==='fail'||v==='partial'){ew.classList.add('vis');}else{/* keep visible if already opened */}}
+  updateScoreBar();
+}
+
+function toggleEvidence(cid){
+  const ew=document.getElementById(`ev-${cid}`);
+  if(ew)ew.classList.toggle('vis');
+}
+
+// ── RENDER ──
+function renderSections(){
+  const container=document.getElementById('sections-container');container.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const activeChecks=getSectionChecks(sec);
+    if(activeChecks.length===0)return;
+    const checksHtml=activeChecks.map(c=>{
+      const isEol=false;
+      const platTags=c.plat.length>0?c.plat.map(p=>`<span class="platform-tag">${p.toUpperCase()}</span>`).join(''):'<span class="platform-tag">ALL</span>';
+      let stdRef='';
+      if(activeStandard==='all'){stdRef=Object.entries(c.std||{}).map(([k,v])=>`<span class="standard-tag">${k.toUpperCase()}: ${v}</span>`).join('');}
+      else if(c.std&&c.std[activeStandard]){stdRef=`<span class="standard-tag">${activeStandard.toUpperCase()}: ${c.std[activeStandard]}</span>`;}
+      const cmd=c.cmd?`<div class="check-cmd">$ ${c.cmd}</div>`:'';
+      return`<div class="check-item" id="ci-${c.id}">
+        <div class="check-item-top">
+          <div>
+            <div class="check-label"><span class="sev-badge sev-${c.sev}">${c.sev}</span> &nbsp;${c.label}</div>
+            <div class="check-sub">${c.sub}</div>
+            <div class="check-tags">${platTags}${stdRef}</div>
+            ${cmd}
+            <div class="evidence-toggle" onclick="toggleEvidence('${c.id}')">+ evidence / output</div>
+            <div class="evidence-wrap" id="ev-${c.id}">
+              <div class="evidence-label">Command output / evidence</div>
+              <textarea class="evidence-ta" placeholder="Paste show output or config snippet here..." rows="3" onchange="evidence['${c.id}']=this.value"></textarea>
+              <div class="evidence-label" style="margin-top:6px">Finding note</div>
+              <textarea class="finding-note-ta" placeholder="Remediation steps, ticket reference, or context..." rows="2" onchange="findingNotes['${c.id}']=this.value"></textarea>
+            </div>
+          </div>
+          <div class="verdict-col">
+            <div class="verdict-buttons">
+              <button class="vbtn vbtn-pass" id="vbtn-${c.id}-pass" onclick="setVerdict('${c.id}','pass')">Pass</button>
+              <button class="vbtn vbtn-partial" id="vbtn-${c.id}-partial" onclick="setVerdict('${c.id}','partial')">Partial</button>
+              <button class="vbtn vbtn-fail" id="vbtn-${c.id}-fail" onclick="setVerdict('${c.id}','fail')">Fail</button>
+              <button class="vbtn vbtn-na" id="vbtn-${c.id}-na" onclick="setVerdict('${c.id}','na')">N/A</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    const div=document.createElement('div');div.className='section-card';
+    const tot=activeChecks.length;
+    div.innerHTML=`<div class="section-header" onclick="toggleSection('${sec.id}')">
+      <div class="section-left"><div class="section-icon">${sec.icon}</div>
+        <div><div class="section-name">${sec.name}</div><div class="section-sub">${sec.sub}</div></div></div>
+      <div class="section-right">
+        <div class="section-score-pill" id="spill-${sec.id}">0/${tot} reviewed</div>
+        <div class="chevron" id="schev-${sec.id}">&#9654;</div></div></div>
+      <div class="section-body" id="sbody-${sec.id}">${checksHtml}</div>`;
+    container.appendChild(div);
+    // update pill live
+    updateSectionPill(sec);
+  });
+  toggleSection(SECTIONS[0].id);
+}
+
+function updateSectionPill(sec){
+  const active=getSectionChecks(sec);
+  const reviewed=active.filter(c=>verdicts[c.id]!=='').length;
+  const passed=active.filter(c=>verdicts[c.id]==='pass').length;
+  const failed=active.filter(c=>verdicts[c.id]==='fail').length;
+  const pill=document.getElementById(`spill-${sec.id}`);
+  if(!pill)return;
+  const na=active.filter(c=>verdicts[c.id]==='na').length;
+  const applicable=active.length-na;
+  const partial=active.filter(c=>verdicts[c.id]==='partial').length;
+  const score=applicable>0?Math.round(((passed+partial*0.5)/applicable)*100):null;
+  if(score!==null&&reviewed>0){
+    const color=score>=90?'#16a34a':score>=60?'#d97706':'#dc2626';
+    const bg=score>=90?'#f0fdf4':score>=60?'#fffbeb':'#fef2f2';
+    const bdr=score>=90?'#86efac':score>=60?'#fcd34d':'#fca5a5';
+    pill.style.cssText=`background:${bg};color:${color};border-color:${bdr};`;
+    pill.textContent=`${score}% (${reviewed}/${active.length})`;
+  }else{pill.style.cssText='';pill.textContent=`${reviewed}/${active.length} reviewed`;}
+}
+
+function toggleSection(id){
+  const b=document.getElementById(`sbody-${id}`),ch=document.getElementById(`schev-${id}`);
+  if(!b)return;const o=b.classList.toggle('open');ch.classList.toggle('open',o);
+}
+
+// ── SUMMARY ──
+function renderSummary(){
+  const {pass,partial,fail,na,total,applicable,score}=calcScore();
+  const band=scoreBand(score);
+  document.getElementById('sum-metrics').innerHTML=`
+    <div class="sum-mc"><div class="sum-lbl">Compliance score</div><div class="sum-val" style="color:${band.color}">${score!==null?score+'%':'—'}</div><div class="sum-sub">${band.label}</div></div>
+    <div class="sum-mc"><div class="sum-lbl">Passing checks</div><div class="sum-val" style="color:var(--pass)">${pass}</div><div class="sum-sub">of ${applicable} applicable</div></div>
+    <div class="sum-mc"><div class="sum-lbl">Failing checks</div><div class="sum-val" style="color:var(--fail)">${fail}</div><div class="sum-sub">${partial} partial</div></div>
+    <div class="sum-mc"><div class="sum-lbl">N/A / skipped</div><div class="sum-val">${na}</div><div class="sum-sub">of ${total} total</div></div>`;
+  // section bars
+  document.getElementById('sum-sec-bars').innerHTML=SECTIONS.map(sec=>{
+    const active=getSectionChecks(sec);if(!active.length)return'';
+    const na=active.filter(c=>verdicts[c.id]==='na').length;
+    const applicable=active.length-na;
+    const pass=active.filter(c=>verdicts[c.id]==='pass').length;
+    const partial=active.filter(c=>verdicts[c.id]==='partial').length;
+    const s=applicable>0?Math.round(((pass+partial*0.5)/applicable)*100):null;
+    const color=s===null?'#b0b4c4':s>=90?'#16a34a':s>=60?'#d97706':'#dc2626';
+    return`<div class="dbar-row"><div class="dbar-lbl">${sec.icon} ${sec.name}</div>
+      <div class="dbar-track"><div class="dbar-fill" style="width:${s||0}%;background:${color}"></div></div>
+      <div class="dbar-sc" style="color:${color}">${s!==null?s+'%':'—'}</div></div>`;
+  }).join('');
+  // findings by sev
+  const sevOrder=['CRITICAL','HIGH','MEDIUM','LOW','INFO'];
+  const findings=[];
+  SECTIONS.forEach(sec=>getSectionChecks(sec).forEach(c=>{
+    const v=verdicts[c.id];
+    if(v==='fail'||v==='partial')findings.push({...c,verdict:v,section:sec.name});
+  }));
+  findings.sort((a,b)=>sevOrder.indexOf(a.sev)-sevOrder.indexOf(b.sev));
+  document.getElementById('sum-findings').innerHTML=findings.length
+    ?findings.map(f=>`<div class="finding-row">
+        <span class="sev-badge sev-${f.sev}">${f.sev}</span>
+        <div class="finding-text"><strong>${f.label}</strong>
+          <span class="verdict-chip vc-${f.verdict}" style="margin-left:6px">${f.verdict.toUpperCase()}</span>
+          <div class="finding-cat">${f.section}${findingNotes[f.id]?' — '+findingNotes[f.id]:''}</div>
+        </div>
+      </div>`).join('')
+    :'<div style="padding:8px 0;color:var(--text3);font-size:13px">No failures or partial findings. Complete all checks for a full assessment.</div>';
+}
+
+// ── EXEC REPORT ──
+function renderExec(){
+  const {pass,partial,fail,na,applicable,score}=calcScore();
+  const band=scoreBand(score);
+  const sevOrder=['CRITICAL','HIGH','MEDIUM','LOW','INFO'];
+  const findings=[];
+  SECTIONS.forEach(sec=>getSectionChecks(sec).forEach(c=>{
+    const v=verdicts[c.id];if(v==='fail'||v==='partial')findings.push({...c,verdict:v,section:sec.name});
+  }));
+  findings.sort((a,b)=>sevOrder.indexOf(a.sev)-sevOrder.indexOf(b.sev));
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const platStr=[...activePlatforms].map(p=>p.toUpperCase()).join(', ');
+  const stdMap={cis:'CIS Benchmark',nist:'NIST 800-53 / CSF',stig:'DISA STIG',internal:'Internal Baseline',all:'Multi-standard'};
+
+  const secDetail=SECTIONS.map(sec=>{
+    const active=getSectionChecks(sec);if(!active.length)return'';
+    const rows=active.map(c=>{
+      const v=verdicts[c.id]||'';
+      const vcls=v?`vc-${v}`:'';
+      const vcText=v?v.toUpperCase():'—';
+      const ev=evidence[c.id]?`<div style="font-size:10px;font-family:var(--mono);background:var(--surface2);padding:3px 6px;border-radius:3px;margin-top:3px;white-space:pre-wrap;word-break:break-all">${evidence[c.id].slice(0,300)}</div>`:'';
+      const note=findingNotes[c.id]?`<div style="font-size:10px;color:var(--text3);font-style:italic;margin-top:2px">${findingNotes[c.id]}</div>`:'';
+      return`<tr><td><span class="sev-badge sev-${c.sev}">${c.sev}</span> ${c.label}${ev}${note}</td><td style="text-align:center"><span class="verdict-chip ${vcls}">${vcText}</span></td><td style="font-size:10px;color:var(--text3);font-family:var(--mono)">${c.std?.[activeStandard]||Object.values(c.std||{})[0]||''}</td></tr>`;
+    }).join('');
+    const na=active.filter(c=>verdicts[c.id]==='na').length;
+    const pass=active.filter(c=>verdicts[c.id]==='pass').length;
+    const pt=active.filter(c=>verdicts[c.id]==='partial').length;
+    const app=active.length-na;
+    const s=app>0?Math.round(((pass+pt*0.5)/app)*100):null;
+    const color=s===null?'var(--text3)':s>=90?'#16a34a':s>=60?'#d97706':'#dc2626';
+    return`<div class="exec-detail"><h2>${sec.icon} ${sec.name} <span style="font-size:12px;font-weight:400;color:${color}">${s!==null?s+'%':''}</span></h2>
+      <table class="etbl"><thead><tr><th>Check</th><th style="width:70px;text-align:center">Result</th><th style="width:120px">Reference</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+
+  const critFail=findings.filter(f=>f.sev==='CRITICAL'&&f.verdict==='fail').length;
+  const highFail=findings.filter(f=>f.sev==='HIGH'&&(f.verdict==='fail'||f.verdict==='partial')).length;
+  let verdict='',verdictBg='',verdictTc='';
+  if(score===null){verdict='Assessment incomplete';verdictBg='var(--surface2)';verdictTc='var(--text3)';}
+  else if(critFail>0){verdict=`NOT COMPLIANT — ${critFail} critical failure${critFail>1?'s':''}`;verdictBg='#fef2f2';verdictTc='#dc2626';}
+  else if(score>=90){verdict='COMPLIANT';verdictBg='#f0fdf4';verdictTc='#16a34a';}
+  else if(score>=75){verdict='LARGELY COMPLIANT — minor findings';verdictBg='#f0fdf4';verdictTc='#16a34a';}
+  else if(score>=60){verdict='PARTIAL COMPLIANCE — remediation required';verdictBg='#fffbeb';verdictTc='#d97706';}
+  else{verdict='NON-COMPLIANT — significant remediation required';verdictBg='#fef2f2';verdictTc='#dc2626';}
+
+  document.getElementById('exec-content').innerHTML=`
+    <div class="exec-hdr">
+      <h1>Network Configuration Audit Report</h1>
+      <h2>${auditMeta.hostname}${auditMeta.ip?' — '+auditMeta.ip:''}${auditMeta.role?' — '+auditMeta.role:''}</h2>
+      <div class="exec-meta">
+        <span><strong>Date:</strong> ${now}</span>
+        <span><strong>Auditor:</strong> ${auditMeta.auditor||'—'}</span>
+        ${auditMeta.period?`<span><strong>Period:</strong> ${auditMeta.period}</span>`:''}
+        <span><strong>Platform:</strong> ${platStr}</span>
+        <span><strong>Standard:</strong> ${stdMap[activeStandard]||activeStandard}</span>
+        ${auditMeta.version?`<span><strong>Version:</strong> ${auditMeta.version}</span>`:''}
+      </div>
+    </div>
+    <div class="exec-scorecard">
+      <div class="exec-score-box" style="border-color:${band.color}20">
+        <div class="exec-big" style="color:${band.color}">${score!==null?score+'%':'—'}</div>
+        <div class="exec-band" style="color:${band.color}">${band.label}</div>
+        <div class="exec-verdict" style="background:${verdictBg};color:${verdictTc}">${verdict}</div>
+      </div>
+      <div class="exec-cats"><h3>Section scores</h3>
+        ${SECTIONS.map(sec=>{
+          const active=getSectionChecks(sec);if(!active.length)return'';
+          const na=active.filter(c=>verdicts[c.id]==='na').length;
+          const pass=active.filter(c=>verdicts[c.id]==='pass').length;
+          const pt=active.filter(c=>verdicts[c.id]==='partial').length;
+          const app=active.length-na;const s=app>0?Math.round(((pass+pt*0.5)/app)*100):null;
+          const color=s===null?'#b0b4c4':s>=90?'#16a34a':s>=60?'#d97706':'#dc2626';
+          return`<div class="dbar-row" style="margin-bottom:7px"><div class="dbar-lbl">${sec.icon} ${sec.name}</div>
+            <div class="dbar-track"><div class="dbar-fill" style="width:${s||0}%;background:${color}"></div></div>
+            <div class="dbar-sc" style="color:${color}">${s!==null?s+'%':'—'}</div></div>`;
+        }).join('')}
+        <div style="margin-top:10px;font-size:12px;color:var(--text2)">${pass} pass · ${partial} partial · ${fail} fail · ${na} N/A · ${applicable} applicable</div>
+      </div>
+    </div>
+    ${auditMeta.notes?`<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:18px;font-size:13px;color:var(--text2)"><strong>Context:</strong> ${auditMeta.notes}</div>`:''}
+    ${findings.length?`<div class="exec-findings"><h2>Findings — ${findings.length} item${findings.length!==1?'s':''} requiring attention</h2>
+      ${findings.map(f=>`<div class="efc" style="border-left:3px solid ${f.sev==='CRITICAL'?'#7c2d12':f.sev==='HIGH'?'#dc2626':f.sev==='MEDIUM'?'#d97706':f.sev==='LOW'?'#2563eb':'#0891b2'}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <span class="sev-badge sev-${f.sev}">${f.sev}</span>
+          <span class="verdict-chip vc-${f.verdict}">${f.verdict.toUpperCase()}</span>
+          <div><strong style="font-size:13px">${f.label}</strong> <span style="font-size:11px;color:var(--text3)">(${f.section})</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:3px">${f.sub}</div>
+        ${f.cmd?`<div style="font-size:10px;font-family:var(--mono);background:var(--surface2);padding:2px 7px;border-radius:3px;display:inline-block;margin-bottom:3px">$ ${f.cmd}</div>`:''}
+        ${evidence[f.id]?`<div style="font-size:10px;font-family:var(--mono);background:var(--surface2);padding:4px 7px;border-radius:3px;white-space:pre-wrap;word-break:break-all;margin-top:3px;max-height:80px;overflow:hidden">${evidence[f.id].slice(0,400)}</div>`:''}
+        ${findingNotes[f.id]?`<div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:4px">&#128203; ${findingNotes[f.id]}</div>`:''}
+      </div>`).join('')}
+    </div>`:''}
+    ${secDetail}`;
+}
+
+// ── MULTI-DEVICE ──
+let slotCount=3;
+function initMultiSlots(){
+  multiSlots=[];
+  const container=document.getElementById('device-slots');container.innerHTML='';
+  for(let i=0;i<3;i++)addDeviceSlot();
+}
+function addDeviceSlot(){
+  const idx=multiSlots.length;multiSlots.push(null);
+  const container=document.getElementById('device-slots');
+  const div=document.createElement('div');div.className='device-slot';div.id=`ms-${idx}`;
+  div.innerHTML=`<div class="slot-info"><div class="slot-name" id="msn-${idx}">Device ${idx+1}</div><div class="slot-meta" id="msm-${idx}">Not loaded</div></div>
+    <div class="slot-actions">
+      <button class="slot-btn" onclick="document.getElementById('mfi-${idx}').click()">Load JSON</button>
+      <input type="file" id="mfi-${idx}" accept=".json" onchange="loadMultiSlot(${idx},event)">
+      <span class="slot-clear" id="msc-${idx}" style="display:none" onclick="clearMultiSlot(${idx})">Remove</span>
+    </div>`;
+  container.appendChild(div);
+}
+function loadMultiSlot(idx,evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d.tool!=='network-audit'){alert('Not a network audit JSON.');return;}
+    multiSlots[idx]=d;
+    const slot=document.getElementById(`ms-${idx}`);slot.classList.add('loaded');
+    document.getElementById(`msn-${idx}`).textContent=d.meta?.hostname||'Unknown';
+    const sc=d.compliance_score;
+    document.getElementById(`msm-${idx}`).textContent=`${d.meta?.role||''} · Score: ${sc!==null?sc+'%':'incomplete'} · ${d.meta?.platforms?.join(', ')||''}`;
+    document.getElementById(`msc-${idx}`).style.display='inline';
+  }catch(err){alert('Error: '+err.message);}};r.readAsText(file);
+}
+function clearMultiSlot(idx){multiSlots[idx]=null;const slot=document.getElementById(`ms-${idx}`);slot.classList.remove('loaded');document.getElementById(`msn-${idx}`).textContent=`Device ${idx+1}`;document.getElementById(`msm-${idx}`).textContent='Not loaded';document.getElementById(`msc-${idx}`).style.display='none';}
+
+function runMultiSummary(){
+  const loaded=multiSlots.filter(x=>x!==null);
+  if(loaded.length<1){alert('Load at least one audit JSON file.');return;}
+  const sorted=[...loaded].sort((a,b)=>(b.compliance_score||0)-(a.compliance_score||0));
+  const rows=sorted.map(d=>{
+    const sc=d.compliance_score;
+    const band=scoreBand(sc);
+    const color=sc>=90?'#16a34a':sc>=60?'#d97706':'#dc2626';
+    const bg=sc>=90?'#f0fdf4':sc>=60?'#fffbeb':'#fef2f2';
+    const findings=d.categories?.flatMap(cat=>cat.checks?.filter(c=>c.verdict==='fail'||c.verdict==='partial')||[])||[];
+    const crit=findings.filter(c=>c.sev==='CRITICAL').length;
+    const high=findings.filter(c=>c.sev==='HIGH').length;
+    return`<tr>
+      <td><strong>${d.meta?.hostname||'—'}</strong><div style="font-size:11px;color:var(--text3)">${d.meta?.role||''} ${d.meta?.ip?'— '+d.meta.ip:''}</div></td>
+      <td><span style="font-size:10px;color:var(--text3)">${d.meta?.platforms?.join(', ')||''}</span></td>
+      <td><span class="compliance-pill" style="background:${bg};color:${color}">${sc!==null?sc+'%':'—'} ${band.label}</span></td>
+      <td style="font-size:12px">${crit>0?`<span class="sev-chip sev-critical" style="margin-right:3px">CRIT: ${crit}</span>`:''}${high>0?`<span class="sev-chip sev-high">HIGH: ${high}</span>`:crit===0?'<span style="color:var(--pass);font-weight:600">✓ No critical/high</span>':''}</td>
+      <td style="font-size:11px;color:var(--text3)">${d.meta?.auditor||''} ${d.meta?.period?'/ '+d.meta.period:''}</td>
+    </tr>`;
+  }).join('');
+  const avgScore=Math.round(sorted.filter(d=>d.compliance_score!==null).reduce((a,d)=>a+(d.compliance_score||0),0)/sorted.filter(d=>d.compliance_score!==null).length)||null;
+  const output=document.getElementById('multi-output');output.className='multi-output visible';
+  output.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Fleet compliance summary — ${loaded.length} device${loaded.length!==1?'s':''}</h3>
+    <div class="sum-grid" style="margin-bottom:14px">
+      <div class="sum-mc"><div class="sum-lbl">Devices audited</div><div class="sum-val">${loaded.length}</div></div>
+      <div class="sum-mc"><div class="sum-lbl">Fleet avg score</div><div class="sum-val" style="color:${avgScore>=90?'#16a34a':avgScore>=60?'#d97706':'#dc2626'}">${avgScore!==null?avgScore+'%':'—'}</div></div>
+      <div class="sum-mc"><div class="sum-lbl">Fully compliant (≥90%)</div><div class="sum-val" style="color:var(--pass)">${sorted.filter(d=>(d.compliance_score||0)>=90).length}</div></div>
+      <div class="sum-mc"><div class="sum-lbl">Non-compliant (&lt;60%)</div><div class="sum-val" style="color:var(--fail)">${sorted.filter(d=>d.compliance_score!==null&&d.compliance_score<60).length}</div></div>
+    </div>
+    <table class="multi-device-table"><thead><tr><th>Device</th><th>Platform</th><th>Compliance</th><th>Critical findings</th><th>Auditor / Period</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── JSON ──
+function buildPayload(){
+  const {pass,partial,fail,na,applicable,score}=calcScore();
+  const checks=getActiveChecks();
+  return{
+    schema_version:"1.0",tool:"network-audit",
+    meta:{...auditMeta,platforms:[...activePlatforms],standard:activeStandard},
+    assessment_date:new Date().toISOString(),
+    compliance_score:score,
+    compliance_band:scoreBand(score).label,
+    stats:{pass,partial,fail,na,total:checks.length,applicable},
+    categories:SECTIONS.map(sec=>{
+      const active=getSectionChecks(sec);if(!active.length)return null;
+      return{id:sec.id,name:sec.name,
+        checks:active.map(c=>({
+          id:c.id,label:c.label,sev:c.sev,
+          verdict:verdicts[c.id]||'',
+          evidence:evidence[c.id]||'',
+          note:findingNotes[c.id]||'',
+          ref:c.std?.[activeStandard]||''
+        }))
+      };
+    }).filter(Boolean)
+  };
+}
+function generateJSON(){document.getElementById('json-out').value=JSON.stringify(buildPayload(),null,2);}
+function exportAudit(){generateJSON();switchTab('io');}
+function copyJSON(){generateJSON();navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to clipboard',1500);}
+function downloadJSON(){
+  const p=buildPayload();
+  const name=(p.meta.hostname||'audit').replace(/\s+/g,'-').toLowerCase();
+  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`net-audit-${name}-${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+function loadFromFile(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d.tool!=='network-audit'){document.getElementById('load-status').textContent='⚠ Not a network audit file.';return;}
+    // restore meta
+    auditMeta={...d.meta};
+    activePlatforms=new Set(d.meta.platforms||['generic']);
+    activeStandard=d.meta.standard||'cis';
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('audit-badge-text').textContent=`${auditMeta.platforms.map(p=>p.toUpperCase()).join(' · ')} AUDIT — ${auditMeta.standard.toUpperCase()}`;
+    document.getElementById('app-title').textContent=`${auditMeta.hostname}${auditMeta.ip?' ('+auditMeta.ip+')':''}`;
+    document.getElementById('app-sub').textContent=`${auditMeta.role||''}${auditMeta.version?' · '+auditMeta.version:''}${auditMeta.period?' · '+auditMeta.period:''}`;
+    // init and restore verdicts
+    getActiveChecks().forEach(c=>{verdicts[c.id]='';evidence[c.id]='';findingNotes[c.id]='';});
+    d.categories?.forEach(cat=>cat.checks?.forEach(ch=>{
+      if(ch.verdict)verdicts[ch.id]=ch.verdict;
+      if(ch.evidence)evidence[ch.id]=ch.evidence;
+      if(ch.note)findingNotes[ch.id]=ch.note;
+    }));
+    renderSections();
+    // re-apply verdicts to UI
+    getActiveChecks().forEach(c=>{if(verdicts[c.id])setVerdict(c.id,verdicts[c.id]);});
+    // restore evidence text
+    d.categories?.forEach(cat=>cat.checks?.forEach(ch=>{
+      const et=document.getElementById(`ev-${ch.id}`);
+      if(et&&(ch.evidence||ch.note)){
+        et.classList.add('vis');
+        const ta=et.querySelector('.evidence-ta');if(ta&&ch.evidence)ta.value=ch.evidence;
+        const nt=et.querySelector('.finding-note-ta');if(nt&&ch.note)nt.value=ch.note;
+      }
+    }));
+    SECTIONS.forEach(sec=>updateSectionPill(sec));
+    updateScoreBar();initMultiSlots();
+    document.getElementById('load-status').style.color='#16a34a';
+    document.getElementById('load-status').textContent=`✓ Loaded audit for ${auditMeta.hostname} — ${d.compliance_score!==null?d.compliance_score+'%':'incomplete'}`;
+    switchTab('checklist');
+  }catch(err){document.getElementById('load-status').style.color='#dc2626';document.getElementById('load-status').textContent='Error: '+err.message;}};
+  r.readAsText(file);
+}
+function resetAudit(){if(!confirm('Reset and start a new audit?'))return;Object.keys(verdicts).forEach(k=>verdicts[k]='');Object.keys(evidence).forEach(k=>evidence[k]='');Object.keys(findingNotes).forEach(k=>findingNotes[k]='');document.getElementById('setup-screen').classList.remove('hidden');}
+
+// ── TABS ──
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.style.borderBottomColor=x.dataset.tab===t?'#0369a1':'transparent';});
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));
+  if(t==='summary')renderSummary();
+  if(t==='exec')renderExec();
+}
+document.getElementById('tabs').addEventListener('click',e=>{const tab=e.target.closest('.tab');if(!tab)return;switchTab(tab.dataset.tab);});
+
+// default
+selectStd('cis');togglePlat('generic');
+</script>
+</body>
+</html>

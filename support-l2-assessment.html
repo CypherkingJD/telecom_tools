@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2 Support Team Assessment</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f5f7f5;--surface:#ffffff;--surface2:#edf0ed;--border:#dce0dc;--border2:#b4bcb4;
+  --text:#141a14;--text2:#485048;--text3:#82908a;
+  --radius:10px;--radius-sm:6px;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Consolas','Courier New',monospace;
+  --level-color:#16803c;--level-bg:#f0fdf4;--level-border:#a7f3c0;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+.b1{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+.b2{background:#FFF0E0;color:#7A3B00;border-color:#F5B96A;}
+.b3{background:#FEFCE0;color:#6B5A00;border-color:#E8D840;}
+.b4{background:#EDFAE0;color:#2E5E10;border-color:#A3D460;}
+.b5{background:#E0FAE8;color:#0A4E28;border-color:#3DC87A;}
+.b1.sel{background:#E24B4A;color:#fff;border-color:#A32D2D;box-shadow:0 0 0 3px #F0959550;}
+.b2.sel{background:#F5851A;color:#fff;border-color:#7A3B00;box-shadow:0 0 0 3px #F5B96A50;}
+.b3.sel{background:#D4C000;color:#3a3000;border-color:#6B5A00;box-shadow:0 0 0 3px #E8D84050;}
+.b4.sel{background:#6DB82A;color:#fff;border-color:#2E5E10;box-shadow:0 0 0 3px #A3D46050;}
+.b5.sel{background:#1AC866;color:#fff;border-color:#0A4E28;box-shadow:0 0 0 3px #3DC87A50;}
+#app{max-width:980px;margin:0 auto;padding:24px 16px;}
+.level-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:var(--level-bg);border:1.5px solid var(--level-border);margin-bottom:16px;}
+.level-badge .lvl-dot{width:10px;height:10px;border-radius:50%;background:var(--level-color);}
+.level-badge .lvl-text{font-size:12px;font-weight:600;color:var(--level-color);letter-spacing:.04em;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+.title-block h1{font-size:20px;font-weight:600;}
+.title-block p{font-size:12px;color:var(--text3);margin-top:2px;}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.btn{padding:7px 14px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:#141a14;color:#fff;border-color:#141a14;}
+.btn-primary:hover{background:#2a342a;}
+.btn-danger{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+#overall-badge{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--surface2);color:var(--text3);border:1.5px solid var(--border);white-space:nowrap;}
+.meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:center;}
+.meta-row label{font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap;}
+.meta-row input,.meta-row select{padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);min-width:140px;}
+.meta-row select{min-width:200px;}
+.progress-wrap{margin-bottom:14px;}
+.progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:#1AC866;border-radius:2px;transition:width .3s;}
+.progress-label{font-size:11px;color:var(--text3);margin-top:3px;}
+.legend{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.legend-dot{width:9px;height:9px;border-radius:50%;}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px;overflow-x:auto;}
+.tab{padding:9px 16px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab.active{color:var(--text);border-bottom:2px solid var(--level-color);font-weight:500;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.area-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.area-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;cursor:pointer;user-select:none;gap:12px;}
+.area-header:hover{background:var(--surface2);}
+.area-left{display:flex;align-items:center;gap:10px;}
+.area-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;background:var(--surface2);}
+.area-name{font-size:14px;font-weight:600;}
+.area-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.area-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.area-bar-wrap{width:90px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.area-bar-inner{height:100%;border-radius:3px;transition:width .3s;width:0%;}
+.area-pill{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text3);white-space:nowrap;min-width:105px;text-align:center;}
+.chevron{font-size:11px;color:var(--text3);transition:transform .2s;}
+.chevron.open{transform:rotate(90deg);}
+.area-body{border-top:1px solid var(--border);padding:4px 18px 14px;display:none;}
+.area-body.open{display:block;}
+.cat-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px;padding-bottom:5px;border-bottom:1px dashed var(--border2);}
+.obj-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;padding:9px 0;border-top:1px solid var(--border);}
+.obj-label{font-size:13px;font-weight:500;color:var(--text);}
+.obj-sub{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;}
+.obj-sel-lbl{display:none;font-size:11px;font-weight:500;margin-top:5px;padding:3px 8px;border-radius:4px;}
+.score-col{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.score-buttons{display:flex;gap:4px;}
+.score-btn{width:32px;height:32px;border-radius:var(--radius-sm);border:1.5px solid transparent;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:transform .1s;}
+.score-btn:active{transform:scale(.91);}
+.note-toggle{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;margin-top:3px;}
+.obj-note{width:100%;margin-top:5px;padding:5px 8px;font-size:11px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:none;min-height:40px;display:none;}
+.obj-note.vis{display:block;}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px;}
+.mc{background:var(--surface2);border-radius:var(--radius-sm);padding:11px 13px;}
+.mc-lbl{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.mc-val{font-size:22px;font-weight:600;}
+.mc-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.risk-band-block{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius-sm);margin-bottom:14px;border:1.5px solid var(--border);}
+.risk-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+.dbar-row{display:grid;grid-template-columns:200px 1fr 38px;gap:10px;align-items:center;margin-bottom:7px;}
+.dbar-lbl{font-size:12px;color:var(--text2);}
+.dbar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:3px;transition:width .3s;}
+.dbar-sc{font-size:12px;font-weight:600;text-align:right;}
+.findings-list{list-style:none;}
+.fi{display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);font-size:13px;align-items:flex-start;}
+.sev{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:1px;letter-spacing:.03em;}
+.sev-c{background:#FCEBEB;color:#791F1F;}.sev-h{background:#FFF0E0;color:#7A3B00;}.sev-m{background:#FEFCE0;color:#6B5A00;}
+.exec-hdr{text-align:center;padding:26px 0 20px;border-bottom:2px solid var(--border);margin-bottom:22px;}
+.exec-hdr h1{font-size:22px;font-weight:700;}.exec-hdr h2{font-size:14px;font-weight:400;color:var(--text2);margin-top:4px;}
+.exec-hdr .lvl-stamp{display:inline-block;margin-top:10px;padding:4px 16px;border-radius:20px;background:var(--level-bg);border:1.5px solid var(--level-border);font-size:12px;font-weight:600;color:var(--level-color);}
+.exec-meta{display:flex;gap:20px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.exec-meta span{font-size:12px;color:var(--text2);}
+.exec-scorecard{display:grid;grid-template-columns:1fr 1.5fr;gap:18px;margin-bottom:22px;}
+.exec-overall{padding:22px;border-radius:var(--radius);border:2px solid var(--border);text-align:center;}
+.big-sc{font-size:50px;font-weight:700;line-height:1;}.band-lbl{font-size:14px;font-weight:600;margin-top:5px;}.band-desc{font-size:12px;color:var(--text2);margin-top:5px;}
+.exec-areas{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;}
+.exec-areas h3{font-size:13px;font-weight:600;margin-bottom:10px;}
+.exec-findings{margin-bottom:22px;}.exec-findings h2{font-size:15px;font-weight:600;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.efc{border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:8px;break-inside:avoid;}
+.exec-detail{margin-bottom:22px;}.exec-detail h2{font-size:15px;font-weight:600;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.etbl{width:100%;border-collapse:collapse;font-size:12px;}
+.etbl th{text-align:left;padding:6px 10px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);}
+.etbl td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+.chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:5px;font-size:12px;font-weight:700;}
+.json-area{width:100%;height:260px;font-family:var(--mono);font-size:11px;padding:11px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:vertical;}
+.json-actions{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;}
+.load-section{margin-top:22px;border-top:1px solid var(--border);padding-top:18px;}
+.load-section h3{font-size:13px;font-weight:600;margin-bottom:8px;}
+.file-drop{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:18px;text-align:center;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:9px;}
+.file-drop:hover{border-color:var(--text3);background:var(--surface2);}
+#file-input{display:none;}
+@media print{body{background:#fff;font-size:12px;}#app{padding:0;max-width:100%;}.topbar .toolbar,.tabs,.tab-panel:not(#tab-exec){display:none!important;}#tab-exec{display:block!important;}.area-card{break-inside:avoid;}.score-btn,.chip{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}
+@media(max-width:600px){.exec-scorecard{grid-template-columns:1fr;}.dbar-row{grid-template-columns:130px 1fr 32px;}}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="level-badge"><div class="lvl-dot"></div><div class="lvl-text">LEVEL 2 SUPPORT — TEAM ASSESSMENT</div></div>
+<div class="topbar">
+  <div class="title-block"><h1>L2 Support Team Assessment</h1><p>Manager-scored evaluation of fault isolation, protocol knowledge, runbook execution, and L3 escalation quality</p></div>
+  <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+    <div id="overall-badge">Not scored</div>
+    <div class="toolbar">
+      <button class="btn" onclick="switchTab('exec')">📋 Executive view</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+      <button class="btn" onclick="exportJSON()">↓ Export JSON</button>
+      <button class="btn btn-danger" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </div>
+</div>
+<div class="meta-row">
+  <label>Environment:</label>
+  <select id="env-select" oninput="updateExec()">
+    <option value="">Select environment...</option>
+    <option>ISP / Carrier Network Ops</option>
+    <option>Enterprise IT / Campus Network</option>
+    <option>Managed Services Provider (MSP)</option>
+    <option>Telecom / Wireless Carrier (Cell, CBRS, Private LTE)</option>
+    <option>Data Center Operations</option>
+    <option>Cloud / Hybrid Infrastructure</option>
+  </select>
+  <label>Team / Shift:</label><input type="text" id="team-name" placeholder="e.g. NOC Tier 2 West" oninput="updateExec()">
+  <label>Manager:</label><input type="text" id="assessor-name" placeholder="Manager name" oninput="updateExec()">
+  <label>Period:</label><input type="text" id="period-name" placeholder="e.g. Q2 2025" oninput="updateExec()">
+</div>
+<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div><div class="progress-label" id="prog-label">0 objectives scored</div></div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>1 — Critical gap</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>2 — Below standard</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Developing</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>4 — Proficient</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>5 — Exemplary</div>
+</div>
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="score">Scoring</button>
+  <button class="tab" data-tab="summary">Summary</button>
+  <button class="tab" data-tab="exec">Executive Display</button>
+  <button class="tab" data-tab="io">Export / Import</button>
+</div>
+<div class="tab-panel active" id="tab-score"><div id="areas-container"></div></div>
+<div class="tab-panel" id="tab-summary">
+  <div class="metrics-grid" id="sum-metrics"></div><div id="sum-band"></div>
+  <div style="margin-bottom:18px"><h3 style="font-size:13px;font-weight:600;margin-bottom:9px">Area breakdown</h3><div id="sum-bars"></div></div>
+  <div><h3 style="font-size:13px;font-weight:600;margin-bottom:9px">Prioritized findings</h3><ul class="findings-list" id="sum-findings"></ul></div>
+</div>
+<div class="tab-panel" id="tab-exec"><div id="exec-content"></div></div>
+<div class="tab-panel" id="tab-io">
+  <h3 style="font-size:13px;font-weight:600;margin-bottom:8px">Export current assessment as JSON</h3>
+  <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+  <div class="json-actions"><button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button><button class="btn" onclick="copyJSON()">Copy to clipboard</button><button class="btn" onclick="downloadJSON()">↓ Download .json</button></div>
+  <div class="load-section"><h3>Load assessment from JSON</h3>
+    <div class="file-drop" onclick="document.getElementById('file-input').click()">Click to select a JSON file — or paste below and click Load<input type="file" id="file-input" accept=".json" onchange="loadFromFile(event)"></div>
+    <textarea class="json-area" id="json-in" placeholder="Paste JSON here..."></textarea>
+    <div class="json-actions"><button class="btn btn-primary" onclick="loadFromPaste()">Load from pasted JSON</button></div>
+    <div id="load-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+  </div>
+</div>
+<script>
+const SC={solid:["","#E24B4A","#F5851A","#D4C000","#6DB82A","#1AC866"],bg:["","#FCEBEB","#FFF0E0","#FEFCE0","#EDFAE0","#E0FAE8"],bdr:["","#F09595","#F5B96A","#E8D840","#A3D460","#3DC87A"],txt:["","#791F1F","#7A3B00","#6B5A00","#2E5E10","#0A4E28"],lbl:["","Critical gap","Below standard","Developing","Proficient","Exemplary"]};
+const BANDS=[{min:0,max:1.5,label:"Critical deficiency",desc:"Core L2 diagnostic and technical skills require immediate development plan."},{min:1.5,max:2.5,label:"Below standard",desc:"Fault isolation and protocol skills below L2 requirements."},{min:2.5,max:3.5,label:"Developing",desc:"Technical foundation present; consistency and depth need structured improvement."},{min:3.5,max:4.2,label:"Proficient",desc:"Team performing reliably across L2 functions with minor technical gaps."},{min:4.2,max:6,label:"Exemplary",desc:"High-performing L2 team; strong technical depth and escalation quality."}];
+function getBand(s){return s?BANDS.find(b=>s>=b.min&&s<b.max)||BANDS[0]:null;}
+function bi(s){if(!s)return 0;if(s<1.5)return 1;if(s<2.5)return 2;if(s<3.5)return 3;if(s<4.2)return 4;return 5;}
+
+const AREAS=[
+  {id:"diag",name:"Fault Isolation & Diagnostics",icon:"🔍",sub:"Systematic approach to isolating and diagnosing network faults",
+   cats:[
+    {name:"Isolation methodology",objs:[
+      {id:"d_method",  lbl:"Structured diagnostic methodology",  sub:"Uses OSI-layer or top-down/bottom-up approach; not random troubleshooting",   map:{1:"Random/shotgun troubleshooting",2:"Loose methodology",3:"Follows general approach",4:"Structured and consistent",5:"Disciplined methodology; documents hypothesis chain"}},
+      {id:"d_scope",   lbl:"Fault scope determination",          sub:"Correctly identifies whether fault is single-node, segment, or network-wide",  map:{1:"Cannot scope faults",2:"Frequently misjudges scope",3:"Correct for common fault types",4:"Accurate scoping including multi-segment",5:"Rapid accurate scoping; checks upstream/downstream proactively"}},
+      {id:"d_loopback",lbl:"Loop/continuity testing proficiency", sub:"ICMP, traceroute, path analysis, end-to-end service verification steps",      map:{1:"Cannot perform basic path testing",2:"Basic ping only",3:"Traceroute + basic path analysis",4:"Full path + service verification",5:"Advanced: MTR, TCP traceroute, ECMP-aware testing"}},
+    ]},
+    {name:"Log & data analysis",objs:[
+      {id:"d_syslog",  lbl:"Syslog analysis depth",              sub:"Reads and interprets device syslogs to identify error patterns and timestamps", map:{1:"Cannot read syslog",2:"Finds obvious errors only",3:"Identifies relevant log entries",4:"Correlates logs across devices",5:"Multi-device log correlation with timeline reconstruction"}},
+      {id:"d_snmp",    lbl:"SNMP trap & MIB interpretation",     sub:"Interprets SNMP traps, understands OID context, uses MIB browser when needed", map:{1:"No SNMP knowledge",2:"Identifies trap type only",3:"Interprets common traps",4:"Correlates traps + MIB lookups",5:"OID-level analysis; custom MIB queries"}},
+      {id:"d_interface",lbl:"Interface statistics interpretation",sub:"Reads error counters, utilization, duplex, CRC, discards to diagnose issues",  map:{1:"Cannot interpret interface stats",2:"Reads utilization only",3:"Reads common counters",4:"Full counter interpretation",5:"Baseline comparison; trend identification"}},
+    ]},
+  ]},
+  {id:"cli",name:"CLI & Platform Proficiency",icon:"⌨️",sub:"Command-line proficiency across network platforms in scope",
+   cats:[
+    {name:"Platform command knowledge",objs:[
+      {id:"c_show",    lbl:"Show/display command proficiency",    sub:"Executes correct show commands for routing, switching, interfaces, BGP, OSPF",  map:{1:"Cannot execute show commands independently",2:"Basic show interface/version only",3:"Proficient on primary platform",4:"Proficient on 2+ platforms",5:"Expert; multi-vendor including Cisco, Juniper, Linux"}},
+      {id:"c_debug",   lbl:"Debug command awareness",             sub:"Knows when/how to use debug safely; avoids CPU-impacting debugs in production", map:{1:"Unaware of debug commands",2:"Uses debugs unsafely",3:"Uses debugs with guidance",4:"Safe debug use with scope control",5:"Targeted debug; clears after use; logs output"}},
+      {id:"c_l2cmd",   lbl:"Layer 2 command proficiency",         sub:"STP state, MAC table, VLAN, port-channel, CDP/LLDP show commands",              map:{1:"No L2 command knowledge",2:"Basic show vlan only",3:"STP + MAC table commands",4:"Full L2 diagnostic command set",5:"Includes MLAG, VxLAN, port-channel troubleshooting"}},
+      {id:"c_l3cmd",   lbl:"Layer 3 command proficiency",         sub:"Routing table, BGP/OSPF/EIGRP neighbors, route lookups, CEF/FIB inspection",   map:{1:"No routing CLI knowledge",2:"show ip route only",3:"BGP/OSPF neighbor state",4:"Full routing table + neighbor analysis",5:"CEF/FIB, recursive lookups, policy routing verification"}},
+    ]},
+    {name:"Change execution",objs:[
+      {id:"c_change",  lbl:"Runbook-based change execution",      sub:"Executes pre-approved changes per runbook without deviation or improvisation",  map:{1:"Deviates from runbooks regularly",2:"Occasional improvisation",3:"Follows runbooks with guidance",4:"Consistent runbook adherence",5:"Zero deviation; flags runbook gaps for improvement"}},
+      {id:"c_rollback",lbl:"Rollback execution",                  sub:"Can execute a documented rollback procedure correctly under pressure",           map:{1:"Cannot execute rollback",2:"Requires hand-holding",3:"Executes standard rollbacks",4:"Executes complex rollbacks confidently",5:"Executes and validates rollback; documents outcome"}},
+      {id:"c_verfiy",  lbl:"Post-change verification",            sub:"Verifies service restoration using defined test cases after every change",      map:{1:"No post-change verification",2:"Ad hoc verification",3:"Checks primary service only",4:"Full test case execution",5:"Test cases documented + automated checks triggered"}},
+    ]},
+  ]},
+  {id:"proto",name:"Protocol & Technology Knowledge",icon:"🌐",sub:"Depth of knowledge across networking protocols relevant to environment",
+   cats:[
+    {name:"Layer 2 protocols",objs:[
+      {id:"p_stp",     lbl:"STP/RSTP/MSTP understanding",         sub:"Root bridge election, port states, TCN propagation, convergence behavior",     map:{1:"No STP knowledge",2:"Knows root bridge concept only",3:"Port states + basic convergence",4:"TCN analysis + MSTP basics",5:"Full STP forensics; distinguishes symptom vs. root cause"}},
+      {id:"p_lag",     lbl:"Link aggregation (LACP/PAgP)",         sub:"Port-channel negotiation, hashing, member state troubleshooting",              map:{1:"No LAG knowledge",2:"Knows concept only",3:"Can verify LAG state",4:"Troubleshoots member failures",5:"Hash analysis + LACP negotiation deep-dive"}},
+      {id:"p_vlan",    lbl:"VLAN / trunking troubleshooting",      sub:"802.1Q, native VLAN, allowed VLANs, trunk negotiation (DTP)",                  map:{1:"No VLAN knowledge",2:"Basic VLAN concept",3:"Configures and verifies VLANs",4:"Trunk troubleshooting",5:"Native VLAN, DTP, pruning, multi-switch propagation"}},
+    ]},
+    {name:"Layer 3 & routing",objs:[
+      {id:"p_ospf",    lbl:"OSPF neighbor & adjacency troubleshooting",sub:"Hello parameters, area mismatch, DR/BDR election, LSA types",             map:{1:"No OSPF knowledge",2:"Knows neighbor states",3:"Identifies adjacency failures",4:"Hello param + DR/BDR analysis",5:"LSA analysis + flooding scope troubleshooting"}},
+      {id:"p_bgp",     lbl:"BGP session & path troubleshooting",    sub:"Peer state, AS path, route advertisement, policy (prefix-list, route-map)",   map:{1:"No BGP knowledge",2:"Knows session states",3:"Verifies advertised routes",4:"AS path + policy analysis",5:"Full BGP path selection + policy troubleshooting"}},
+      {id:"p_env",     lbl:"Environment-specific protocol knowledge",sub:"MPLS, SD-WAN, CBRS/LTE, cloud networking — relevant to deployed environment",map:{1:"No env-specific knowledge",2:"Basic awareness",3:"Can verify state",4:"Troubleshoots common failures",5:"Deep expertise in primary env technology"}},
+    ]},
+  ]},
+  {id:"vendor",name:"Vendor TAC Engagement",icon:"📞",sub:"Quality and effectiveness of interactions with vendor technical support",
+   cats:[
+    {name:"Case quality",objs:[
+      {id:"v_open",    lbl:"TAC case opening quality",             sub:"Case opened with correct severity, complete description, and evidence attached",map:{1:"Cases opened with minimal info",2:"Inconsistent quality",3:"Usually adequate",4:"Complete and well-documented",5:"Comprehensive; no back-and-forth required"}},
+      {id:"v_evidence",lbl:"Evidence collection & packaging",      sub:"Attaches relevant logs, configs (sanitized), show outputs, and timeline",      map:{1:"No evidence attached",2:"Partial evidence",3:"Core evidence attached",4:"Complete evidence package",5:"Annotated evidence with timeline and hypothesis"}},
+      {id:"v_drive",   lbl:"TAC case driving & follow-up",         sub:"Follows up proactively; maintains urgency; escalates within TAC when stalled",  map:{1:"Cases sit idle",2:"Follows up only when prompted",3:"Regular follow-up",4:"Proactive with urgency management",5:"Escalates within vendor; drives to resolution"}},
+    ]},
+    {name:"L3 escalation quality",objs:[
+      {id:"v_l3hand",  lbl:"L3 escalation handoff quality",        sub:"L3 receives complete diagnostic summary, steps taken, and hypothesis",         map:{1:"No context provided to L3",2:"Verbal summary only",3:"Basic written summary",4:"Structured summary with evidence",5:"Full diagnostic package with annotated logs"}},
+      {id:"v_scope",   lbl:"L3 escalation scope accuracy",         sub:"Only escalates genuinely L3-scope issues; doesn't escalate prematurely",       map:{1:"Over-escalates routine issues",2:"Frequent premature escalation",3:"Generally appropriate",4:"Consistently appropriate",5:"Zero inappropriate escalations; coaches L1 on scope"}},
+    ]},
+  ]},
+  {id:"incident",name:"Incident Ownership",icon:"🚑",sub:"Taking ownership of incidents through to resolution or clean handoff",
+   cats:[
+    {name:"Ownership & accountability",objs:[
+      {id:"i_own",     lbl:"Incident ownership behavior",          sub:"Takes clear ownership; doesn't deflect or wait for direction",                  map:{1:"Avoids ownership",2:"Waits for direction",3:"Owns when assigned",4:"Proactively takes ownership",5:"Leads incident; assigns tasks to L1 support"}},
+      {id:"i_update",  lbl:"Incident update discipline",           sub:"Regular, clear ticket updates during investigation per defined cadence",        map:{1:"No updates during investigation",2:"Updates only on request",3:"Periodic updates",4:"Consistent per-SLA updates",5:"Real-time documentation of findings"}},
+      {id:"i_contain", lbl:"Impact containment actions",           sub:"Identifies and executes containment steps (reroute, failover) while investigating",map:{1:"No containment awareness",2:"Waits for L3 to direct",3:"Executes known containment steps",4:"Identifies and acts on containment independently",5:"Proactive containment + monitors for secondary impact"}},
+    ]},
+    {name:"Documentation",objs:[
+      {id:"i_doc",     lbl:"Investigation documentation quality",  sub:"Diagnostic steps, commands run, outputs, and findings documented in ticket",   map:{1:"No documentation",2:"Sparse notes",3:"Key steps documented",4:"Complete investigation log",5:"Reproducible step-by-step with annotated outputs"}},
+      {id:"i_rca",     lbl:"Contributing RCA input quality",        sub:"Provides accurate technical input to postmortem when requested",               map:{1:"Cannot contribute to RCA",2:"Provides symptoms only",3:"Identifies likely cause",4:"Provides root cause with evidence",5:"Provides root cause + contributing factors + timeline"}},
+    ]},
+  ]},
+  {id:"learning",name:"Technical Growth & Knowledge Transfer",icon:"📈",sub:"Skill advancement and contribution to team knowledge base",
+   cats:[
+    {name:"Technical development",objs:[
+      {id:"l_certs",   lbl:"Certification & formal study",         sub:"CCNA/CCNP, JNCIA/JNCIS, or equivalent; active study toward next cert",         map:{1:"No certifications or active study",2:"Entry-level only",3:"Mid-level cert held",4:"Advanced cert or active pursuit",5:"Advanced cert held + mentors others"}},
+      {id:"l_selflab", lbl:"Lab / self-directed learning",         sub:"Uses lab environment, GNS3/EVE-NG, or cloud labs to test hypotheses",          map:{1:"No self-directed lab use",2:"Occasional use",3:"Regular lab use",4:"Consistent structured lab work",5:"Publishes findings; contributes to team runbooks"}},
+      {id:"l_l3ready", lbl:"L3 readiness progression",            sub:"Demonstrating architecture-level thinking; building toward L3 scope",           map:{1:"No L3 scope awareness",2:"Limited awareness",3:"Understands L3 scope",4:"Actively building L3 skills",5:"L3-ready on primary technology domain"}},
+    ]},
+  ]},
+];
+
+const scores={},notes={};
+AREAS.forEach(a=>a.cats.forEach(c=>c.objs.forEach(o=>{scores[o.id]=0;notes[o.id]='';})));
+function areaAvg(a){const v=a.cats.flatMap(c=>c.objs.map(o=>scores[o.id])).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function totalObjs(){return AREAS.reduce((a,ar)=>a+ar.cats.reduce((b,c)=>b+c.objs.length,0),0);}
+function countScored(){return Object.values(scores).filter(v=>v>0).length;}
+function calcOverall(){const v=Object.values(scores).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function setScore(oid,val){scores[oid]=val;document.querySelectorAll(`[data-oid="${oid}"]`).forEach(btn=>{const bv=parseInt(btn.dataset.val);btn.className=`score-btn b${bv}`+(bv===val?' sel':'');});const lbl=document.getElementById(`lbl-${oid}`);if(lbl){const area=AREAS.find(a=>a.cats.some(c=>c.objs.find(o=>o.id===oid)));const obj=area&&area.cats.flatMap(c=>c.objs).find(o=>o.id===oid);if(val>0&&obj){lbl.textContent=obj.map[val];lbl.style.cssText=`display:inline-block;background:${SC.bg[val]};color:${SC.txt[val]};`;}else{lbl.style.display='none';}}updateAreaPill(AREAS.find(a=>a.cats.some(c=>c.objs.find(o=>o.id===oid))));updateProgress();updateBadge();}
+function updateAreaPill(area){if(!area)return;const avg=areaAvg(area),pill=document.getElementById(`apill-${area.id}`),bar=document.getElementById(`abar-${area.id}`);const sc=area.cats.flatMap(c=>c.objs).filter(o=>scores[o.id]>0).length,tot=area.cats.flatMap(c=>c.objs).length;if(pill){if(avg>0){const b=bi(avg);pill.style.cssText=`background:${SC.bg[b]};color:${SC.txt[b]};border-color:${SC.bdr[b]};`;pill.textContent=`${avg.toFixed(1)} — ${SC.lbl[b]}  (${sc}/${tot})`;}else{pill.style.cssText='background:var(--surface2);color:var(--text3);border-color:var(--border);';pill.textContent=`Not scored (0/${tot})`;}}if(bar){bar.style.width=(avg>0?avg/5*100:0)+'%';bar.style.background=avg>0?SC.solid[bi(avg)]:'';}};
+function updateProgress(){const sc=countScored(),tot=totalObjs();document.getElementById('prog-fill').style.width=Math.round(sc/tot*100)+'%';document.getElementById('prog-label').textContent=`${sc} of ${tot} objectives scored`;}
+function updateBadge(){const o=calcOverall(),badge=document.getElementById('overall-badge');if(!o){badge.style.cssText='';badge.textContent='Not scored';return;}const b=bi(o);badge.style.cssText=`background:${SC.bg[b]};color:${SC.txt[b]};border-color:${SC.bdr[b]};`;badge.textContent=`${SC.lbl[b]} — ${o.toFixed(2)}`;}
+function toggleArea(id){const body=document.getElementById(`abody-${id}`),chev=document.getElementById(`achev-${id}`);const open=body.classList.toggle('open');chev.classList.toggle('open',open);}
+function toggleNote(oid){const n=document.getElementById(`note-${oid}`);n.classList.toggle('vis');if(n.classList.contains('vis'))n.focus();}
+function renderAreas(){const c=document.getElementById('areas-container');c.innerHTML='';AREAS.forEach(area=>{const cats=area.cats.map(cat=>`<div class="cat-label">${cat.name}</div>${cat.objs.map(obj=>`<div class="obj-row"><div><div class="obj-label">${obj.lbl}</div><div class="obj-sub">${obj.sub}</div><span class="obj-sel-lbl" id="lbl-${obj.id}"></span><div class="note-toggle" onclick="toggleNote('${obj.id}')">+ add note</div><textarea class="obj-note" id="note-${obj.id}" placeholder="Notes, observations, evidence..." rows="2" onchange="notes['${obj.id}']=this.value"></textarea></div><div class="score-col"><div class="score-buttons">${[1,2,3,4,5].map(v=>`<button class="score-btn b${v}" data-oid="${obj.id}" data-val="${v}" onclick="setScore('${obj.id}',${v})">${v}</button>`).join('')}</div></div></div>`).join('')}`).join('');const tot=area.cats.flatMap(c=>c.objs).length;const div=document.createElement('div');div.className='area-card';div.innerHTML=`<div class="area-header" onclick="toggleArea('${area.id}')"><div class="area-left"><div class="area-icon">${area.icon}</div><div><div class="area-name">${area.name}</div><div class="area-sub">${area.sub}</div></div></div><div class="area-right"><div class="area-bar-wrap"><div class="area-bar-inner" id="abar-${area.id}"></div></div><div class="area-pill" id="apill-${area.id}">Not scored (0/${tot})</div><div class="chevron" id="achev-${area.id}">&#9654;</div></div></div><div class="area-body" id="abody-${area.id}">${cats}</div>`;c.appendChild(div);});toggleArea(AREAS[0].id);}
+function renderSummary(){const o=calcOverall(),b=bi(o),band=getBand(o),sc=countScored(),tot=totalObjs();document.getElementById('sum-metrics').innerHTML=`<div class="mc"><div class="mc-lbl">Overall score</div><div class="mc-val" style="color:${o?SC.solid[b]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div><div class="mc-sub">out of 5.00</div></div><div class="mc"><div class="mc-lbl">Performance band</div><div class="mc-val" style="font-size:14px;margin-top:4px;color:${o?SC.solid[b]:'var(--text3)'}">${o?band.label:'—'}</div></div><div class="mc"><div class="mc-lbl">Completion</div><div class="mc-val">${Math.round(sc/tot*100)}%</div><div class="mc-sub">${sc}/${tot} objectives</div></div><div class="mc"><div class="mc-lbl">Areas assessed</div><div class="mc-val">${AREAS.filter(a=>areaAvg(a)>0).length}/${AREAS.length}</div></div>`;document.getElementById('sum-band').innerHTML=o?`<div class="risk-band-block" style="background:${SC.bg[b]};border-color:${SC.bdr[b]}"><div class="risk-dot" style="background:${SC.solid[b]}"></div><div><div style="font-size:14px;font-weight:600;color:${SC.txt[b]}">${band.label}</div><div style="font-size:12px;color:${SC.txt[b]};opacity:.8;margin-top:2px">${band.desc}</div></div></div>`:'';document.getElementById('sum-bars').innerHTML=AREAS.map(a=>{const as=areaAvg(a),ab=bi(as);return`<div class="dbar-row"><div class="dbar-lbl">${a.icon} ${a.name}</div><div class="dbar-track"><div class="dbar-fill" style="width:${as?as/5*100:0}%;background:${as?SC.solid[ab]:''}"></div></div><div class="dbar-sc" style="color:${as?SC.solid[ab]:'var(--text3)'}">${as?as.toFixed(1):'—'}</div></div>`;}).join('');const findings=[];AREAS.forEach(a=>a.cats.forEach(cat=>cat.objs.forEach(o=>{const s=scores[o.id];if(s>0&&s<=3)findings.push({sev:s===1?'c':s===2?'h':'m',lbl:o.lbl,area:a.name,cat:cat.name,score:s,desc:o.map[s]});})));findings.sort((a,b)=>a.score-b.score);document.getElementById('sum-findings').innerHTML=findings.length?findings.slice(0,12).map(f=>`<li class="fi"><span class="sev sev-${f.sev}">${f.sev==='c'?'CRITICAL':f.sev==='h'?'HIGH':'MEDIUM'}</span><span><strong>${f.lbl}</strong> — ${f.desc} <span style="color:var(--text3);font-size:11px">(${f.area} › ${f.cat})</span></span></li>`).join(''):'<li style="padding:8px 0;color:var(--text3);font-size:13px">No findings yet.</li>';}
+function updateExec(){if(document.getElementById('tab-exec').classList.contains('active'))renderExec();}
+function renderExec(){const o=calcOverall(),b=bi(o),band=getBand(o);const env=document.getElementById('env-select').value||'';const team=document.getElementById('team-name').value||'[Team / Shift]';const assessor=document.getElementById('assessor-name').value||'[Manager]';const period=document.getElementById('period-name').value||'';const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});const findings=[];AREAS.forEach(a=>a.cats.forEach(cat=>cat.objs.forEach(obj=>{const s=scores[obj.id];if(s>0&&s<=3)findings.push({sev:s===1?'CRITICAL':s===2?'HIGH':'MEDIUM',lbl:obj.lbl,area:a.name,cat:cat.name,score:s,desc:obj.map[s],sub:obj.sub,note:notes[obj.id]});})));findings.sort((a,b)=>a.score-b.score);const detail=AREAS.map(area=>{const as=areaAvg(area),ab=bi(as);const rows=area.cats.map(cat=>`<tr><td colspan="3" style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3);padding:4px 10px;text-transform:uppercase;letter-spacing:.06em">${cat.name}</td></tr>${cat.objs.map(o=>{const s=scores[o.id];const chip=s?`<span class="chip" style="background:${SC.solid[s]};color:${s===3?'#3a3000':'#fff'}">${s}</span>`:`<span class="chip" style="background:var(--surface2);color:var(--text3)">—</span>`;const noteHtml=notes[o.id]?`<div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic">Note: ${notes[o.id]}</div>`:'';return`<tr><td>${o.lbl}<br><span style="font-size:10px;color:var(--text3)">${o.sub}</span>${noteHtml}</td><td style="text-align:center">${chip}</td><td style="color:${s?SC.txt[bi(s)]:'var(--text3)'};font-size:12px">${s?o.map[s]:'—'}</td></tr>`;}).join('')}`).join('');return`<div class="exec-detail"><h2>${area.icon} ${area.name} <span style="font-size:13px;font-weight:400;color:${as?SC.solid[ab]:'var(--text3)'}">${as?`${as.toFixed(1)} — ${SC.lbl[ab]}`:''}</span></h2><table class="etbl"><thead><tr><th>Objective</th><th style="width:50px;text-align:center">Score</th><th style="width:170px">Rating</th></tr></thead><tbody>${rows}</tbody></table></div>`;}).join('');document.getElementById('exec-content').innerHTML=`<div class="exec-hdr"><h1>L2 Support Team Assessment</h1><h2>${team}</h2><div class="lvl-stamp">Level 2 Support${env?' — '+env:''}</div><div class="exec-meta"><span><strong>Date:</strong> ${now}</span>${period?`<span><strong>Period:</strong> ${period}</span>`:''}<span><strong>Manager:</strong> ${assessor}</span><span><strong>Completion:</strong> ${countScored()}/${totalObjs()} objectives</span></div></div><div class="exec-scorecard"><div class="exec-overall" style="background:${o?SC.bg[b]:'var(--surface2)'};border-color:${o?SC.bdr[b]:'var(--border)'}"><div class="big-sc" style="color:${o?SC.solid[b]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div><div class="band-lbl" style="color:${o?SC.txt[b]:'var(--text3)'}">${o?band.label:'Not scored'}</div><div class="band-desc">${o?band.desc:'Complete scoring to generate results.'}</div></div><div class="exec-areas"><h3>Area scores</h3>${AREAS.map(a=>{const as=areaAvg(a),ab=bi(as);return`<div class="dbar-row" style="margin-bottom:7px"><div class="dbar-lbl">${a.icon} ${a.name}</div><div class="dbar-track"><div class="dbar-fill" style="width:${as?as/5*100:0}%;background:${as?SC.solid[ab]:''}"></div></div><div class="dbar-sc" style="color:${as?SC.solid[ab]:'var(--text3)'}">${as?as.toFixed(1):'—'}</div></div>`;}).join('')}</div></div>${findings.length?`<div class="exec-findings"><h2>Prioritized findings — ${findings.length} items</h2>${findings.map(f=>`<div class="efc" style="border-left:3px solid ${SC.solid[f.score===1?1:f.score===2?2:3]}"><div style="display:flex;align-items:center;gap:9px;margin-bottom:5px"><span class="sev sev-${f.score===1?'c':f.score===2?'h':'m'}">${f.sev}</span><div><div style="font-size:13px;font-weight:600">${f.lbl}</div><div style="font-size:11px;color:var(--text3)">${f.area} › ${f.cat}</div></div></div><div style="display:grid;grid-template-columns:70px 1fr;gap:3px;font-size:12px"><span style="color:var(--text3);font-weight:500">Current:</span><span style="color:${SC.txt[f.score]}">${f.desc}</span><span style="color:var(--text3);font-weight:500">Scope:</span><span style="color:var(--text2)">${f.sub}</span>${f.note?`<span style="color:var(--text3);font-weight:500">Note:</span><span style="color:var(--text2);font-style:italic">${f.note}</span>`:''}</div></div>`).join('')}</div>`:''}${detail}`;}
+function buildPayload(){return{schema_version:"1.0",tool:"support-l2-assessment",level:"L2",team:document.getElementById('team-name').value,assessor:document.getElementById('assessor-name').value,environment:document.getElementById('env-select').value,period:document.getElementById('period-name').value,assessment_date:new Date().toISOString(),overall_score:parseFloat(calcOverall().toFixed(4)),performance_band:getBand(calcOverall())?.label||null,completion:{scored:countScored(),total:totalObjs()},areas:AREAS.map(a=>({area_id:a.id,area_name:a.name,area_avg:parseFloat(areaAvg(a).toFixed(4)),categories:a.cats.map(cat=>({name:cat.name,objectives:cat.objs.map(o=>({id:o.id,label:o.lbl,score:scores[o.id],rating:scores[o.id]?o.map[scores[o.id]]:null,note:notes[o.id]||null}))}))}))};}
+function generateJSON(){document.getElementById('json-out').value=JSON.stringify(buildPayload(),null,2);}
+function exportJSON(){generateJSON();switchTab('io');}
+function copyJSON(){generateJSON();navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to clipboard',1500);}
+function downloadJSON(){const p=buildPayload();const name=(p.team||'l2-assessment').replace(/\s+/g,'-').toLowerCase();const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`l2-assessment-${name}-${new Date().toISOString().slice(0,10)}.json`;a.click();}
+function applyPayload(data){try{if(data.team)document.getElementById('team-name').value=data.team;if(data.assessor)document.getElementById('assessor-name').value=data.assessor;if(data.environment)document.getElementById('env-select').value=data.environment;if(data.period)document.getElementById('period-name').value=data.period;data.areas.forEach(a=>a.categories.forEach(cat=>cat.objectives.forEach(o=>{if(o.score&&o.score>0)setScore(o.id,o.score);if(o.note){notes[o.id]=o.note;const el=document.getElementById(`note-${o.id}`);if(el){el.value=o.note;el.classList.add('vis');}}})));AREAS.forEach(a=>updateAreaPill(a));updateProgress();updateBadge();document.getElementById('load-status').style.color='#2E5E10';document.getElementById('load-status').textContent=`✓ Loaded: ${data.team||'Assessment'} — ${data.period||''}`;switchTab('score');}catch(e){document.getElementById('load-status').style.color='#791F1F';document.getElementById('load-status').textContent='Error: '+e.message;}}
+function loadFromPaste(){try{applyPayload(JSON.parse(document.getElementById('json-in').value));}catch(e){document.getElementById('load-status').style.color='#791F1F';document.getElementById('load-status').textContent='Invalid JSON: '+e.message;}}
+function loadFromFile(evt){const file=evt.target.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{try{applyPayload(JSON.parse(e.target.result));}catch(err){document.getElementById('load-status').style.color='#791F1F';document.getElementById('load-status').textContent='Error: '+err.message;}};r.readAsText(file);}
+function resetAll(){if(!confirm('Reset all scores and notes?'))return;AREAS.forEach(a=>a.cats.forEach(c=>c.objs.forEach(o=>{scores[o.id]=0;notes[o.id]='';}))); renderAreas();updateProgress();updateBadge();['team-name','assessor-name','period-name'].forEach(id=>document.getElementById(id).value='');document.getElementById('env-select').value='';}
+function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));if(t==='summary')renderSummary();if(t==='exec')renderExec();}
+document.getElementById('tabs').addEventListener('click',e=>{const tab=e.target.closest('.tab');if(!tab)return;switchTab(tab.dataset.tab);});
+renderAreas();
+</script>
+</body>
+</html>

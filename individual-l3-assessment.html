@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L3 Individual Assessment</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f6f7f9;--surface:#fff;--surface2:#eef0f4;--border:#dde0e8;--border2:#b8bcc8;
+  --text:#14161f;--text2:#4a4e60;--text3:#878ca8;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Consolas','Courier New',monospace;
+  --radius:10px;--radius-sm:6px;
+  --self:#2563eb;--self-bg:#eff4ff;--self-bdr:#bfcfff;
+  --partner:#0891b2;--partner-bg:#ecfeff;--partner-bdr:#a5f3fc;
+  --manager:#7c3aed;--manager-bg:#f5f3ff;--manager-bdr:#c4b5fd;
+  --level-color:#7c3aed;--level-bg:#f5f3ff;--level-border:#c4b5fd;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+
+/* score colors */
+.b1{background:#FCEBEB;color:#791F1F;border-color:#F09595;}
+.b2{background:#FFF0E0;color:#7A3B00;border-color:#F5B96A;}
+.b3{background:#FEFCE0;color:#6B5A00;border-color:#E8D840;}
+.b4{background:#EDFAE0;color:#2E5E10;border-color:#A3D460;}
+.b5{background:#E0FAE8;color:#0A4E28;border-color:#3DC87A;}
+.b1.sel{background:#E24B4A;color:#fff;border-color:#A32D2D;box-shadow:0 0 0 3px #F0959550;}
+.b2.sel{background:#F5851A;color:#fff;border-color:#7A3B00;box-shadow:0 0 0 3px #F5B96A50;}
+.b3.sel{background:#D4C000;color:#3a3000;border-color:#6B5A00;box-shadow:0 0 0 3px #E8D84050;}
+.b4.sel{background:#6DB82A;color:#fff;border-color:#2E5E10;box-shadow:0 0 0 3px #A3D46050;}
+.b5.sel{background:#1AC866;color:#fff;border-color:#0A4E28;box-shadow:0 0 0 3px #3DC87A50;}
+
+#app{max-width:980px;margin:0 auto;padding:24px 16px;}
+
+/* mode selector overlay */
+#mode-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;}
+#mode-screen.hidden{display:none;}
+.mode-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px 36px;max-width:520px;width:100%;}
+.mode-card h2{font-size:18px;font-weight:600;margin-bottom:6px;}
+.mode-card p{font-size:13px;color:var(--text3);margin-bottom:24px;}
+.mode-options{display:flex;flex-direction:column;gap:10px;}
+.mode-opt{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
+.mode-opt:hover{background:var(--surface2);}
+.mode-opt.self:hover,.mode-opt.self.active{border-color:var(--self);background:var(--self-bg);}
+.mode-opt.partner:hover,.mode-opt.partner.active{border-color:var(--partner);background:var(--partner-bg);}
+.mode-opt.manager:hover,.mode-opt.manager.active{border-color:var(--manager);background:var(--manager-bg);}
+.mode-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.mode-opt-title{font-size:13px;font-weight:600;}
+.mode-opt-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+.mode-name-row{margin-top:16px;display:flex;flex-direction:column;gap:6px;}
+.mode-name-row label{font-size:12px;font-weight:500;color:var(--text2);}
+.mode-name-row input{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--text);width:100%;}
+.mode-start-btn{margin-top:18px;width:100%;padding:10px;font-size:13px;font-weight:600;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;}
+
+/* rater badge */
+.rater-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;margin-bottom:14px;border:1.5px solid;}
+.rater-badge .dot{width:9px;height:9px;border-radius:50%;}
+.rater-badge .rtxt{font-size:12px;font-weight:600;letter-spacing:.04em;}
+
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.title-block h1{font-size:19px;font-weight:600;}
+.title-block p{font-size:12px;color:var(--text3);margin-top:2px;}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;}
+.btn{padding:7px 13px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:#14161f;color:#fff;border-color:#14161f;}
+.btn-primary:hover{background:#2a2d3a;}
+.btn-accent{color:#fff;border:none;}
+#overall-badge{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;background:var(--surface2);color:var(--text3);border:1.5px solid var(--border);white-space:nowrap;}
+
+.meta-row{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:13px;align-items:center;}
+.meta-row label{font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap;}
+.meta-row input,.meta-row select{padding:5px 9px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);min-width:130px;}
+
+.progress-wrap{margin-bottom:13px;}
+.progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;transition:width .3s;}
+.progress-label{font-size:11px;color:var(--text3);margin-top:3px;}
+
+.legend{display:flex;gap:11px;margin-bottom:13px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.legend-dot{width:9px;height:9px;border-radius:50%;}
+
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.tab{padding:8px 15px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab.active{color:var(--text);font-weight:500;border-bottom:2px solid var(--level-color);}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* area cards */
+.area-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:13px;overflow:hidden;}
+.area-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;gap:10px;}
+.area-header:hover{background:var(--surface2);}
+.area-left{display:flex;align-items:center;gap:9px;}
+.area-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--surface2);flex-shrink:0;}
+.area-name{font-size:13px;font-weight:600;}.area-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.area-right{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.area-bar-wrap{width:80px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.area-bar-inner{height:100%;border-radius:3px;transition:width .3s;width:0%;}
+.area-pill{font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text3);white-space:nowrap;min-width:100px;text-align:center;}
+.chevron{font-size:10px;color:var(--text3);transition:transform .2s;}.chevron.open{transform:rotate(90deg);}
+.area-body{border-top:1px solid var(--border);padding:4px 16px 12px;display:none;}.area-body.open{display:block;}
+.area-narrative{margin-top:12px;padding-top:10px;border-top:1px dashed var(--border2);}
+.area-narrative label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;}
+.area-narrative textarea{width:100%;padding:7px 10px;font-size:12px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:none;min-height:60px;}
+
+.cat-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:13px 0 5px;padding-bottom:5px;border-bottom:1px dashed var(--border2);}
+.obj-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--border);}
+.obj-label{font-size:13px;font-weight:500;}.obj-sub{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;}
+.obj-sel-lbl{display:none;font-size:11px;font-weight:500;margin-top:4px;padding:2px 7px;border-radius:4px;}
+.score-col{display:flex;flex-direction:column;align-items:flex-end;}
+.score-buttons{display:flex;gap:4px;}
+.score-btn{width:31px;height:31px;border-radius:var(--radius-sm);border:1.5px solid transparent;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:transform .1s;}
+.score-btn:active{transform:scale(.91);}
+
+/* ── REVIEW / GAP TAB ── */
+.review-load-area{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+.review-load-area h3{font-size:14px;font-weight:600;margin-bottom:14px;}
+.rater-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px;}
+.rater-slot{border:1.5px dashed var(--border2);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:8px;}
+.rater-slot.loaded{border-style:solid;}
+.rater-slot.self-slot{border-color:var(--self-bdr);background:var(--self-bg);}
+.rater-slot.partner-slot{border-color:var(--partner-bdr);background:var(--partner-bg);}
+.rater-slot.manager-slot{border-color:var(--manager-bdr);background:var(--manager-bg);}
+.slot-label{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.slot-status{font-size:11px;color:var(--text3);}
+.slot-status.ok{color:#0F6E56;font-weight:500;}
+.slot-btn{font-size:11px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface);cursor:pointer;}
+.slot-btn:hover{background:var(--surface2);}
+.slot-clear{font-size:10px;color:var(--text3);cursor:pointer;text-decoration:underline;margin-top:2px;}
+input[type=file]{display:none;}
+
+.merge-btn{width:100%;padding:10px;font-size:13px;font-weight:600;background:#14161f;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:4px;}
+.merge-btn:hover{background:#2a2d3a;}
+.merge-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* gap analysis */
+#gap-output{display:none;}
+#gap-output.visible{display:block;}
+.gap-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.gap-mc{background:var(--surface2);border-radius:var(--radius-sm);padding:11px 13px;}
+.gap-mc-lbl{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.gap-mc-val{font-size:20px;font-weight:600;}
+.gap-mc-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+.rater-legend{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.rl-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;}
+.rl-dot{width:10px;height:10px;border-radius:50%;}
+
+.gap-area-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.gap-area-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.gap-area-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.gap-area-scores{display:flex;gap:8px;}
+.gap-score-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1.5px solid;}
+.gap-area-body{padding:12px 16px;}
+
+.gap-obj-row{padding:8px 0;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;}
+.gap-obj-label{font-size:12px;font-weight:500;}
+.gap-obj-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.gap-bars{display:flex;flex-direction:column;gap:4px;min-width:180px;}
+.gap-bar-row{display:flex;align-items:center;gap:6px;}
+.gap-bar-lbl{font-size:10px;font-weight:600;width:22px;text-align:right;flex-shrink:0;}
+.gap-bar-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.gap-bar-fill{height:100%;border-radius:4px;transition:width .3s;}
+.gap-bar-val{font-size:10px;font-weight:600;width:20px;text-align:right;flex-shrink:0;}
+.gap-flag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;margin-top:4px;}
+.gap-flag-alert{background:#FCEBEB;color:#791F1F;}
+.gap-flag-warn{background:#FFF0E0;color:#7A3B00;}
+.gap-flag-ok{background:#E0FAE8;color:#0A4E28;}
+
+.narrative-compare{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border2);}
+.narrative-compare-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.narrative-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+.narrative-col{background:var(--surface2);border-radius:var(--radius-sm);padding:10px;}
+.narrative-col-hdr{font-size:11px;font-weight:600;margin-bottom:5px;}
+.narrative-col-text{font-size:12px;color:var(--text2);line-height:1.5;font-style:italic;}
+
+/* dev plan */
+.devplan-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-top:16px;}
+.devplan-section h3{font-size:14px;font-weight:600;margin-bottom:4px;}
+.devplan-section p{font-size:12px;color:var(--text3);margin-bottom:14px;}
+.devplan-item{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;background:var(--surface2);}
+.devplan-item-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.devplan-item-lbl{font-size:13px;font-weight:600;}
+.devplan-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.devplan-inputs label{font-size:11px;color:var(--text2);font-weight:500;display:block;margin-bottom:3px;}
+.devplan-inputs input,.devplan-inputs textarea{width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:var(--font);}
+.devplan-inputs textarea{resize:none;min-height:50px;}
+.add-focus-btn{width:100%;padding:8px;font-size:12px;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text3);margin-top:6px;}
+.add-focus-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* io */
+.json-area{width:100%;height:220px;font-family:var(--mono);font-size:11px;padding:10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:vertical;}
+.json-actions{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.load-section{margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+.load-section h3{font-size:13px;font-weight:600;margin-bottom:7px;}
+.file-drop{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:16px;text-align:center;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:8px;}
+.file-drop:hover{border-color:var(--text3);background:var(--surface2);}
+
+/* exec print */
+.exec-hdr{text-align:center;padding:24px 0 18px;border-bottom:2px solid var(--border);margin-bottom:20px;}
+.exec-hdr h1{font-size:20px;font-weight:700;}.exec-hdr h2{font-size:13px;color:var(--text2);margin-top:3px;}
+.exec-meta{display:flex;gap:18px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.exec-meta span{font-size:12px;color:var(--text2);}
+.exec-scorecard{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.exec-score-box{padding:18px;border-radius:var(--radius);border:2px solid var(--border);text-align:center;}
+.exec-score-big{font-size:40px;font-weight:700;line-height:1;}
+.exec-score-lbl{font-size:13px;font-weight:600;margin-top:4px;}
+.exec-score-who{font-size:11px;color:var(--text3);margin-top:3px;}
+.exec-gap-section{margin-bottom:20px;}
+.exec-gap-section h2{font-size:15px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px;}
+.etbl{width:100%;border-collapse:collapse;font-size:12px;}
+.etbl th{text-align:left;padding:5px 9px;background:var(--surface2);font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);}
+.etbl td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:4px;font-size:11px;font-weight:700;}
+
+@media print{
+  body{background:#fff;font-size:12px;}#app{padding:0;max-width:100%;}
+  .topbar .toolbar,.tabs,.tab-panel:not(#tab-exec),.mode-screen{display:none!important;}
+  #tab-exec{display:block!important;}
+  .area-card,.gap-area-card{break-inside:avoid;}
+  .chip,.score-btn{print-color-adjust:exact;-webkit-print-color-adjust:exact;}
+}
+@media(max-width:600px){
+  .exec-scorecard{grid-template-columns:1fr;}
+  .gap-bars{min-width:140px;}
+  .gap-obj-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- MODE SELECTOR -->
+<div id="mode-screen">
+  <div class="mode-card">
+    <h3>L3 Support — Individual Assessment</h3>
+    <p>Select your role for this session. Each rater scores independently. Results are merged by the manager on the Review tab.</p>
+    <div class="mode-options">
+      <div class="mode-opt self" onclick="selectMode('self')">
+        <div class="mode-dot" style="background:var(--self)"></div>
+        <div><div class="mode-opt-title" style="color:var(--self)">Self assessment</div><div class="mode-opt-desc">Rate your own performance on each objective</div></div>
+      </div>
+      <div class="mode-opt partner" onclick="selectMode('partner')">
+        <div class="mode-dot" style="background:var(--partner)"></div>
+        <div><div class="mode-opt-title" style="color:var(--partner)">Partner / peer review</div><div class="mode-opt-desc">Rate a colleague's performance based on your observations</div></div>
+      </div>
+      <div class="mode-opt manager" onclick="selectMode('manager')">
+        <div class="mode-dot" style="background:var(--manager)"></div>
+        <div><div class="mode-opt-title" style="color:var(--manager)">Manager assessment</div><div class="mode-opt-desc">Rate the individual's performance as their direct manager</div></div>
+      </div>
+    </div>
+    <div class="mode-name-row">
+      <label id="mode-name-label">Your name</label>
+      <input type="text" id="mode-rater-name" placeholder="Enter your name...">
+    </div>
+    <div class="mode-name-row" id="subject-row">
+      <label>Individual being assessed</label>
+      <input type="text" id="mode-subject-name" placeholder="Their name...">
+    </div>
+    <button class="mode-start-btn btn-primary" onclick="startSession()" id="start-btn">Begin assessment</button>
+  </div>
+</div>
+
+<div id="app">
+  <div id="rater-badge-wrap"></div>
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>L3 Individual Assessment</h1>
+      <p id="session-subtitle">RCA depth, architecture reasoning, advanced protocol expertise, and knowledge transfer</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div id="overall-badge">Not scored</div>
+      <div class="toolbar">
+        <button class="btn" onclick="switchTab('exec')">📋 Review packet</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+        <button class="btn" onclick="exportSession()">↓ Export session</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <label>Environment:</label>
+    <select id="env-select">
+      <option value="">Select...</option>
+      <option>ISP / Carrier Network Ops</option>
+      <option>Enterprise IT / Campus Network</option>
+      <option>Managed Services Provider (MSP)</option>
+      <option>Telecom / Wireless Carrier (Cell, CBRS, Private LTE)</option>
+      <option>Data Center Operations</option>
+      <option>Cloud / Hybrid Infrastructure</option>
+    </select>
+    <label>Assessment period:</label>
+    <input type="text" id="period-name" placeholder="e.g. Q2 2025">
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 objectives scored</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div>1 — Critical gap</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#F5851A"></div>2 — Below standard</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#D4C000"></div>3 — Developing</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6DB82A"></div>4 — Proficient</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1AC866"></div>5 — Exemplary</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="score">Scoring</button>
+    <button class="tab" data-tab="review">Review &amp; Gap Analysis</button>
+    <button class="tab" data-tab="exec">Review Packet</button>
+    <button class="tab" data-tab="io">Export / Import</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-score"><div id="areas-container"></div></div>
+
+  <div class="tab-panel" id="tab-review">
+    <div class="review-load-area">
+      <h3>Load rater sessions to generate gap analysis</h3>
+      <div class="rater-slots">
+        <div class="rater-slot self-slot" id="slot-self">
+          <div class="slot-label"><div class="mode-dot" style="background:var(--self);width:9px;height:9px;border-radius:50%"></div><span style="color:var(--self)">Self</span></div>
+          <div class="slot-status" id="slot-status-self">Not loaded</div>
+          <button class="slot-btn" onclick="document.getElementById('fi-self').click()">Load JSON file</button>
+          <input type="file" id="fi-self" accept=".json" onchange="loadSlot('self',event)">
+          <span class="slot-clear" id="slot-clear-self" style="display:none" onclick="clearSlot('self')">Remove</span>
+        </div>
+        <div class="rater-slot partner-slot" id="slot-partner">
+          <div class="slot-label"><div class="mode-dot" style="background:var(--partner);width:9px;height:9px;border-radius:50%"></div><span style="color:var(--partner)">Partner</span></div>
+          <div class="slot-status" id="slot-status-partner">Not loaded</div>
+          <button class="slot-btn" onclick="document.getElementById('fi-partner').click()">Load JSON file</button>
+          <input type="file" id="fi-partner" accept=".json" onchange="loadSlot('partner',event)">
+          <span class="slot-clear" id="slot-clear-partner" style="display:none" onclick="clearSlot('partner')">Remove</span>
+        </div>
+        <div class="rater-slot manager-slot" id="slot-manager">
+          <div class="slot-label"><div class="mode-dot" style="background:var(--manager);width:9px;height:9px;border-radius:50%"></div><span style="color:var(--manager)">Manager</span></div>
+          <div class="slot-status" id="slot-status-manager">Not loaded</div>
+          <button class="slot-btn" onclick="document.getElementById('fi-manager').click()">Load JSON file</button>
+          <input type="file" id="fi-manager" accept=".json" onchange="loadSlot('manager',event)">
+          <span class="slot-clear" id="slot-clear-manager" style="display:none" onclick="clearSlot('manager')">Remove</span>
+        </div>
+      </div>
+      <button class="merge-btn" id="merge-btn" onclick="runMerge()" disabled>Generate gap analysis</button>
+    </div>
+    <div id="gap-output"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-exec"><div id="exec-content"></div></div>
+
+  <div class="tab-panel" id="tab-io">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px">Export this session as JSON</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px">Export your scores and notes. Share the JSON file with the manager to be merged with other rater sessions.</p>
+    <textarea class="json-area" id="json-out" readonly placeholder="Click 'Generate JSON' to export..."></textarea>
+    <div class="json-actions">
+      <button class="btn btn-primary" onclick="generateJSON()">Generate JSON</button>
+      <button class="btn" onclick="copyJSON()">Copy to clipboard</button>
+      <button class="btn" onclick="downloadJSON()">↓ Download .json</button>
+    </div>
+    <div class="load-section">
+      <h3>Load a previous session</h3>
+      <div class="file-drop" onclick="document.getElementById('fi-load').click()">Click to load a saved session JSON<input type="file" id="fi-load" accept=".json" onchange="loadMySession(event)"></div>
+      <div id="load-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SC={solid:["","#E24B4A","#F5851A","#D4C000","#6DB82A","#1AC866"],bg:["","#FCEBEB","#FFF0E0","#FEFCE0","#EDFAE0","#E0FAE8"],bdr:["","#F09595","#F5B96A","#E8D840","#A3D460","#3DC87A"],txt:["","#791F1F","#7A3B00","#6B5A00","#2E5E10","#0A4E28"],lbl:["","Critical gap","Below standard","Developing","Proficient","Exemplary"]};
+const BANDS=[{min:0,max:1.5,label:"Critical deficiency"},{min:1.5,max:2.5,label:"Below standard"},{min:2.5,max:3.5,label:"Developing"},{min:3.5,max:4.2,label:"Proficient"},{min:4.2,max:6,label:"Exemplary"}];
+function getBand(s){return s?BANDS.find(b=>s>=b.min&&s<b.max)||BANDS[0]:null;}
+function bi(s){if(!s)return 0;if(s<1.5)return 1;if(s<2.5)return 2;if(s<3.5)return 3;if(s<4.2)return 4;return 5;}
+
+const RATER_COLORS={self:'#2563eb',partner:'#0891b2',manager:'#7c3aed'};
+const RATER_LABELS={self:'Self',partner:'Partner',manager:'Manager'};
+
+const AREAS=[
+  {id:"rca",name:"Root Cause Analysis",icon:"🔬",sub:"Depth, accuracy, and rigor of root cause determination on complex incidents",
+   cats:[
+    {name:"RCA methodology",objs:[
+      {id:"r_method",  lbl:"RCA methodology rigor",              sub:"Uses structured approach (5-why, fishbone, fault tree) — not intuition-only",  map:{1:"Intuition-only, no methodology",2:"Loose framework",3:"Uses methodology inconsistently",4:"Consistent structured approach",5:"Expert; chooses methodology per incident class"}},
+      {id:"r_cause",   lbl:"Root cause vs. symptom distinction",  sub:"Correctly identifies underlying cause, not observable symptoms or effects",    map:{1:"Documents symptoms only",2:"Often stops at proximate cause",3:"Reaches root cause for common incidents",4:"Consistently identifies true root cause",5:"Identifies contributing factors + systemic causes"}},
+      {id:"r_timeline",lbl:"Timeline reconstruction accuracy",    sub:"Reconstructs precise incident timeline from multi-source log evidence",       map:{1:"Cannot reconstruct timelines",2:"Approximate/gaps present",3:"Key events with timestamps",4:"Precise multi-source timeline",5:"Automated + verified; identifies pre-incident anomalies"}},
+      {id:"r_contrib", lbl:"Contributing factor identification",  sub:"Identifies all contributing factors beyond primary cause",                    map:{1:"Single cause only",2:"Occasional contributing factors",3:"Identifies 2-3 factors",4:"Comprehensive factor analysis",5:"Systemic + environmental factors; links to process gaps"}},
+    ]},
+    {name:"RCA documentation",objs:[
+      {id:"r_postm",   lbl:"Postmortem authorship quality",       sub:"Authors clear, blameless postmortems with accurate timeline and SMART actions", map:{1:"Cannot author postmortems",2:"Incomplete/low quality",3:"Adequate quality",4:"High-quality, actionable postmortems",5:"Model postmortems; used as team templates"}},
+      {id:"r_action",  lbl:"Corrective action quality",           sub:"Defines SMART actions distinguishing mitigation from permanent resolution",    map:{1:"Vague or no actions",2:"Actions without owners/dates",3:"Owned actions, not always SMART",4:"SMART with mitigation/resolution distinction",5:"SMART + monitoring improvements + risk reduction metrics"}},
+    ]},
+  ]},
+  {id:"arch",name:"Architecture & Design",icon:"🏗️",sub:"Ability to reason at architecture level and design change solutions",
+   cats:[
+    {name:"Design capability",objs:[
+      {id:"a_design",  lbl:"Change solution design quality",      sub:"Designs changes with rationale, risk assessment, and validation criteria",     map:{1:"Cannot produce design artifacts",2:"High-level diagrams only",3:"Functional design with gaps",4:"Complete design with risk assessment",5:"Production-ready with rollback and test plan"}},
+      {id:"a_risk",    lbl:"Change risk assessment depth",        sub:"Identifies blast radius, failure modes, and dependencies before any change",   map:{1:"No risk assessment practice",2:"Surface-level risks only",3:"Identifies primary risks",4:"Comprehensive risk + dependency mapping",5:"Formal FMEA-style analysis; quantifies impact likelihood"}},
+      {id:"a_topology",lbl:"Network topology reasoning",          sub:"Reasons across multi-layer topology; understands traffic paths and failure domains",map:{1:"Cannot reason across topology",2:"Single device reasoning only",3:"Segment-level reasoning",4:"Multi-layer topology reasoning",5:"Full network reasoning including ECMP, MPLS, SD-WAN paths"}},
+    ]},
+    {name:"Architecture patterns",objs:[
+      {id:"a_redund",  lbl:"Redundancy design proficiency",       sub:"Designs N+1/N+2 redundancy; active/standby vs. active/active tradeoffs",      map:{1:"No redundancy design knowledge",2:"Basic active/standby only",3:"N+1 design proficiency",4:"N+2 + active/active designs",5:"Full resilience architecture including geographic redundancy"}},
+      {id:"a_conv",    lbl:"Convergence & failover reasoning",    sub:"Understands and optimizes protocol convergence timers, failover paths, BFD",   map:{1:"No convergence knowledge",2:"Basic protocol awareness",3:"Timer tuning awareness",4:"Convergence optimization proficiency",5:"Sub-second failover design; BFD + protocol timer expertise"}},
+    ]},
+  ]},
+  {id:"proto",name:"Advanced Protocol Expertise",icon:"⚙️",sub:"Deep protocol knowledge for complex fault resolution and design",
+   cats:[
+    {name:"Core protocols",objs:[
+      {id:"p_bgp",     lbl:"BGP — advanced troubleshooting & design",sub:"BGP path selection, policy, iBGP/eBGP design, route reflection",           map:{1:"No BGP depth",2:"Session state only",3:"Route policy basics",4:"Path selection + policy design",5:"Full BGP architecture including route reflection, confederations"}},
+      {id:"p_ospf",    lbl:"OSPF — LSA/SPF deep expertise",        sub:"LSA types, flooding scope, SPF calculation, area design, virtual links",     map:{1:"No OSPF depth",2:"Neighbor states only",3:"Area design basics",4:"LSA analysis + area design",5:"SPF optimization, stub areas, flooding control, OSPF-TE"}},
+      {id:"p_mpls",    lbl:"MPLS / segment routing",               sub:"Label distribution, LDP/RSVP, TE tunnel design, VPN (L2/L3), SR-MPLS",      map:{1:"No MPLS knowledge",2:"Basic label forwarding",3:"LDP + basic VPN",4:"MPLS-TE + L3VPN design",5:"SR-MPLS, EVPN, TE optimization, label stack troubleshooting"}},
+    ]},
+    {name:"Environment-specific",objs:[
+      {id:"p_stp",     lbl:"STP / L2 fabric — advanced",           sub:"MSTP, PVST+, RPVST, root guard, BPDU filter, interaction with MLAG/vPC",     map:{1:"Basic STP only",2:"RSTP proficient",3:"MSTP + MLAG basics",4:"Full L2 fabric troubleshooting",5:"Root cause STP forensics; vPC/MLAG + MSTP expert"}},
+      {id:"p_sdwan",   lbl:"SD-WAN / overlay architecture",        sub:"Underlay/overlay design, control plane, policy engine, ZTP",                  map:{1:"No SD-WAN knowledge",2:"Basic awareness",3:"Policy + tunnel basics",4:"Full SD-WAN design and troubleshooting",5:"Multi-vendor SD-WAN architecture + migration design"}},
+      {id:"p_wireless",lbl:"Private LTE / CBRS / 5G expertise",    sub:"CBRS SAS/GAA/PAL, EPC/5GC components, RAN troubleshooting, spectrum management",map:{1:"No wireless knowledge",2:"Basic LTE awareness",3:"CBRS spectrum + EPC basics",4:"Full CBRS/private LTE design",5:"5G NR + CBRS + EPC/5GC architecture expert"}},
+    ]},
+  ]},
+  {id:"vendor",name:"Vendor Escalation & Ownership",icon:"🤝",sub:"Leading vendor relationships and driving complex cases to resolution",
+   cats:[
+    {name:"TAC leadership",objs:[
+      {id:"v_sev1",    lbl:"Vendor SEV1 case management",          sub:"Drives vendor SEV1 with urgency, executive escalation, bridge management",    map:{1:"Cannot lead vendor SEV1",2:"Follows vendor; doesn't lead",3:"Manages standard SEV1s",4:"Leads all SEV1s to resolution",5:"Escalates to exec; uses TAM/BDM relationship"}},
+      {id:"v_packet",  lbl:"Packet capture & deep analysis",       sub:"Captures and analyzes traffic (Wireshark/tcpdump) to provide vendor with precise evidence",map:{1:"Cannot capture or analyze packets",2:"Captures but cannot analyze",3:"Analyzes common protocol exchanges",4:"Full protocol decode and anomaly identification",5:"Pinpoints exact fault packet; reduces vendor MTTR significantly"}},
+      {id:"v_defect",  lbl:"Vendor defect identification",         sub:"Identifies software bugs; opens defect reports; tracks fix versions; applies workarounds",map:{1:"No defect identification capability",2:"Reports symptoms to vendor",3:"Identifies likely defects",4:"Opens and tracks defects with workarounds",5:"Defect correlation across cases; accelerates vendor prioritization"}},
+    ]},
+  ]},
+  {id:"mentorship",name:"Mentorship & Knowledge Transfer",icon:"🧑‍🏫",sub:"Developing L2 capability and institutionalizing team knowledge",
+   cats:[
+    {name:"L2 development",objs:[
+      {id:"m_coach",   lbl:"L2 coaching quality",                  sub:"Explains complex topics clearly; adapts to L2 level; builds L2 confidence",   map:{1:"Does not engage with L2 development",2:"Explains but doesn't teach",3:"Functional coaching",4:"Effective structured coaching",5:"Proactive; identifies L2 gaps before incidents; builds curriculum"}},
+      {id:"m_review",  lbl:"L2 work product review",               sub:"Reviews L2 tickets, RCAs, and runbooks with actionable written feedback",     map:{1:"No review practice",2:"Verbal feedback only",3:"Reviews on request",4:"Regular structured review with feedback",5:"Systematic cadence; measurable L2 improvement tracked"}},
+    ]},
+    {name:"Knowledge institutionalization",objs:[
+      {id:"m_runbook", lbl:"Runbook authorship & improvement",     sub:"Authors new runbooks; improves existing ones based on incident learnings",     map:{1:"Does not contribute to runbooks",2:"Occasional edits only",3:"Authors when asked",4:"Proactively authors and improves",5:"Drives runbook library; version controlled; covers edge cases"}},
+      {id:"m_kb",      lbl:"Knowledge base contribution",          sub:"Documents novel findings, workarounds, and lessons in searchable KB",          map:{1:"No KB contribution",2:"Rare contributions",3:"Contributes after major incidents",4:"Regular contributions",5:"Active KB curator; ensures findability and currency"}},
+      {id:"m_train",   lbl:"Formal training delivery",             sub:"Delivers technical training sessions (lunch & learn, brown bag, structured course)",map:{1:"Never delivers training",2:"Delivers when required only",3:"Occasional voluntary sessions",4:"Regular sessions with prepared material",5:"Structured training program; content reused across cohorts"}},
+    ]},
+  ]},
+  {id:"strategy",name:"Strategic Contribution",icon:"🎯",sub:"Contributing to operational improvement and infrastructure strategy",
+   cats:[
+    {name:"Improvement & governance",objs:[
+      {id:"s_trend",   lbl:"Incident trend analysis",              sub:"Identifies patterns across multiple incidents to surface systemic issues",     map:{1:"No trend analysis",2:"Reactive pattern recognition",3:"Periodic trend reviews",4:"Regular reporting with action items",5:"Continuous analysis fed into capacity and architecture planning"}},
+      {id:"s_risk",    lbl:"Proactive risk identification",        sub:"Identifies infrastructure risks before they manifest as incidents",            map:{1:"Purely reactive",2:"Occasional risk flagging",3:"Flags risks when reviewing other work",4:"Structured periodic risk review",5:"Formal risk register; drives remediation prioritization"}},
+      {id:"s_review",  lbl:"Architecture review participation",    sub:"Provides substantive feedback on proposed architecture changes and designs",   map:{1:"Does not participate",2:"Attends but does not contribute",3:"Contributes on familiar technology",4:"Substantive cross-domain contribution",5:"Leads architecture reviews; produces formal review artifacts"}},
+    ]},
+  ]},
+];
+
+// ── STATE ──
+// ── STATE ──
+// ── STATE ──
+let currentMode='';
+let currentRater='';
+let currentSubject='';
+const scores={};
+const narratives={};
+AREAS.forEach(a=>{a.cats.forEach(c=>c.objs.forEach(o=>{scores[o.id]=0;}));narratives[a.id]='';});
+const slotData={self:null,partner:null,manager:null};
+
+// ── MODE SETUP ──
+function selectMode(m){
+  currentMode=m;
+  document.querySelectorAll('.mode-opt').forEach(el=>el.classList.toggle('active',el.classList.contains(m)));
+  document.getElementById('mode-name-label').textContent=m==='self'?'Your name':`Your name (the ${m})`;
+  document.getElementById('subject-row').style.display=m==='self'?'none':'flex';
+  const btn=document.getElementById('start-btn');
+  btn.style.background=RATER_COLORS[m];
+  btn.textContent=`Begin ${RATER_LABELS[m]} assessment`;
+}
+
+function startSession(){
+  const rname=document.getElementById('mode-rater-name').value.trim();
+  if(!currentMode||!rname){alert('Please select a role and enter your name.');return;}
+  currentRater=rname;
+  currentSubject=currentMode==='self'?rname:document.getElementById('mode-subject-name').value.trim();
+  document.getElementById('mode-screen').classList.add('hidden');
+  applyModeUI();
+  renderAreas();
+}
+
+function applyModeUI(){
+  const c=RATER_COLORS[currentMode];
+  document.documentElement.style.setProperty('--level-color',c);
+  const wrap=document.getElementById('rater-badge-wrap');
+  const labels={self:'Self Assessment',partner:'Partner Review',manager:'Manager Assessment'};
+  wrap.innerHTML=`<div class="rater-badge" style="background:${c}18;border-color:${c}60"><div class="dot" style="background:${c}"></div><div class="rtxt" style="color:${c}">${labels[currentMode].toUpperCase()} — ${currentRater.toUpperCase()}</div></div>`;
+  document.getElementById('session-subtitle').textContent=currentMode==='self'?`Scoring your own L3 performance — ${currentSubject}`:`Scoring ${currentSubject} — ${RATER_LABELS[currentMode]}`;
+  document.getElementById('prog-fill').style.background=c;
+}
+
+// ── SCORING ──
+function totalObjs(){return AREAS.reduce((a,ar)=>a+ar.cats.reduce((b,c)=>b+c.objs.length,0),0);}
+function countScored(){return Object.values(scores).filter(v=>v>0).length;}
+function calcOverall(){const v=Object.values(scores).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function areaAvg(a){const v=a.cats.flatMap(c=>c.objs.map(o=>scores[o.id])).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+
+function setScore(oid,val){
+  scores[oid]=val;
+  document.querySelectorAll(`[data-oid="${oid}"]`).forEach(btn=>{const bv=parseInt(btn.dataset.val);btn.className=`score-btn b${bv}`+(bv===val?' sel':'');});
+  const lbl=document.getElementById(`lbl-${oid}`);
+  if(lbl){const area=AREAS.find(a=>a.cats.some(c=>c.objs.find(o=>o.id===oid)));const obj=area&&area.cats.flatMap(c=>c.objs).find(o=>o.id===oid);
+    if(val>0&&obj){lbl.textContent=obj.map[val];lbl.style.cssText=`display:inline-block;background:${SC.bg[val]};color:${SC.txt[val]};`;}else{lbl.style.display='none';}}
+  updateAreaPill(AREAS.find(a=>a.cats.some(c=>c.objs.find(o=>o.id===oid))));
+  updateProgress();updateBadge();
+}
+
+function updateAreaPill(area){
+  if(!area)return;
+  const avg=areaAvg(area),pill=document.getElementById(`apill-${area.id}`),bar=document.getElementById(`abar-${area.id}`);
+  const sc=area.cats.flatMap(c=>c.objs).filter(o=>scores[o.id]>0).length,tot=area.cats.flatMap(c=>c.objs).length;
+  if(pill){if(avg>0){const b=bi(avg);pill.style.cssText=`background:${SC.bg[b]};color:${SC.txt[b]};border-color:${SC.bdr[b]};`;pill.textContent=`${avg.toFixed(1)} — ${SC.lbl[b]} (${sc}/${tot})`;}
+  else{pill.style.cssText='';pill.textContent=`Not scored (0/${tot})`;}}
+  if(bar){bar.style.width=(avg>0?avg/5*100:0)+'%';bar.style.background=avg>0?RATER_COLORS[currentMode]:'';}
+}
+
+function updateProgress(){const sc=countScored(),tot=totalObjs();document.getElementById('prog-fill').style.width=Math.round(sc/tot*100)+'%';document.getElementById('prog-label').textContent=`${sc} of ${tot} objectives scored`;}
+
+function updateBadge(){const o=calcOverall(),badge=document.getElementById('overall-badge');if(!o){badge.style.cssText='';badge.textContent='Not scored';return;}const b=bi(o);badge.style.cssText=`background:${SC.bg[b]};color:${SC.txt[b]};border-color:${SC.bdr[b]};`;badge.textContent=`${SC.lbl[b]} — ${o.toFixed(2)}`;}
+
+function toggleArea(id){const body=document.getElementById(`abody-${id}`),chev=document.getElementById(`achev-${id}`);const open=body.classList.toggle('open');chev.classList.toggle('open',open);}
+
+function renderAreas(){
+  const c=document.getElementById('areas-container');c.innerHTML='';
+  AREAS.forEach(area=>{
+    const cats=area.cats.map(cat=>`<div class="cat-label">${cat.name}</div>${cat.objs.map(obj=>`
+      <div class="obj-row">
+        <div><div class="obj-label">${obj.lbl}</div><div class="obj-sub">${obj.sub}</div><span class="obj-sel-lbl" id="lbl-${obj.id}"></span></div>
+        <div class="score-col"><div class="score-buttons">${[1,2,3,4,5].map(v=>`<button class="score-btn b${v}" data-oid="${obj.id}" data-val="${v}" onclick="setScore('${obj.id}',${v})">${v}</button>`).join('')}</div></div>
+      </div>`).join('')}`).join('');
+    const tot=area.cats.flatMap(c=>c.objs).length;
+    const div=document.createElement('div');div.className='area-card';
+    div.innerHTML=`<div class="area-header" onclick="toggleArea('${area.id}')">
+      <div class="area-left"><div class="area-icon">${area.icon}</div><div><div class="area-name">${area.name}</div><div class="area-sub">${area.sub}</div></div></div>
+      <div class="area-right"><div class="area-bar-wrap"><div class="area-bar-inner" id="abar-${area.id}"></div></div>
+        <div class="area-pill" id="apill-${area.id}">Not scored (0/${tot})</div><div class="chevron" id="achev-${area.id}">&#9654;</div></div></div>
+      <div class="area-body" id="abody-${area.id}">${cats}
+        <div class="area-narrative">
+          <label>${RATER_LABELS[currentMode]||'Rater'} notes — ${area.name}</label>
+          <textarea placeholder="Overall observations, specific examples, context for ratings..." onchange="narratives['${area.id}']=this.value" id="narr-${area.id}"></textarea>
+        </div>
+      </div>`;
+    c.appendChild(div);
+  });
+  toggleArea(AREAS[0].id);
+}
+
+// ── JSON EXPORT ──
+function buildPayload(){
+  return{schema_version:"1.0",tool:"individual-l3-assessment",level:"L3",mode:currentMode,
+    rater:currentRater,subject:currentSubject,
+    environment:document.getElementById('env-select').value,
+    period:document.getElementById('period-name').value,
+    assessment_date:new Date().toISOString(),
+    overall_score:parseFloat(calcOverall().toFixed(4)),
+    performance_band:getBand(calcOverall())?.label||null,
+    completion:{scored:countScored(),total:totalObjs()},
+    areas:AREAS.map(a=>({area_id:a.id,area_name:a.name,area_avg:parseFloat(areaAvg(a).toFixed(4)),
+      narrative:narratives[a.id]||'',
+      categories:a.cats.map(cat=>({name:cat.name,objectives:cat.objs.map(o=>({id:o.id,label:o.lbl,score:scores[o.id],rating:scores[o.id]?o.map[scores[o.id]]:null}))}))}))};
+}
+
+function generateJSON(){document.getElementById('json-out').value=JSON.stringify(buildPayload(),null,2);}
+function exportSession(){generateJSON();switchTab('io');}
+function copyJSON(){generateJSON();navigator.clipboard.writeText(document.getElementById('json-out').value).catch(()=>{});const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to clipboard',1500);}
+function downloadJSON(){
+  const p=buildPayload();
+  const subj=(p.subject||'assessment').replace(/\s+/g,'-').toLowerCase();
+  const mode=p.mode;
+  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`l3-${mode}-${subj}-${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+
+function loadMySession(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const data=JSON.parse(e.target.result);
+    if(data.tool!=='individual-l3-assessment'){document.getElementById('load-status').textContent='⚠ This file is not an L3 individual assessment.';return;}
+    currentMode=data.mode||'self';currentRater=data.rater||'';currentSubject=data.subject||'';
+    if(data.environment)document.getElementById('env-select').value=data.environment;
+    if(data.period)document.getElementById('period-name').value=data.period;
+    data.areas.forEach(a=>{
+      if(a.narrative)narratives[a.area_id]=a.narrative;
+      a.categories.forEach(cat=>cat.objectives.forEach(o=>{if(o.score&&o.score>0)setScore(o.id,o.score);}));
+    });
+    applyModeUI();
+    AREAS.forEach(a=>{updateAreaPill(a);const nt=document.getElementById(`narr-${a.area_id||a.id}`);if(nt&&narratives[a.id])nt.value=narratives[a.id];});
+    updateProgress();updateBadge();
+    document.getElementById('load-status').style.color='#2E5E10';
+    document.getElementById('load-status').textContent=`✓ Loaded ${data.mode} session for ${data.subject||'unknown'}`;
+  }catch(err){document.getElementById('load-status').style.color='#791F1F';document.getElementById('load-status').textContent='Error: '+err.message;}};
+  r.readAsText(file);
+}
+
+// ── MERGE / GAP ANALYSIS ──
+function loadSlot(mode,evt){
+  const file=evt.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{try{
+    const data=JSON.parse(e.target.result);
+    if(data.tool!=='individual-l3-assessment'){alert(`File is not an L1 individual assessment.`);return;}
+    if(data.mode!==mode){alert(`Expected a ${mode} session but got a ${data.mode} session.`);return;}
+    slotData[mode]=data;
+    const status=document.getElementById(`slot-status-${mode}`);
+    status.className='slot-status ok';
+    status.textContent=`✓ ${data.rater} — ${data.subject||''} (${Math.round((data.completion.scored/data.completion.total)*100)}% complete)`;
+    document.getElementById(`slot-clear-${mode}`).style.display='inline';
+    document.getElementById(`slot-${mode}`).classList.add('loaded');
+    checkMergeReady();
+  }catch(err){alert('Error loading file: '+err.message);}};
+  r.readAsText(file);
+}
+function clearSlot(mode){slotData[mode]=null;document.getElementById(`slot-status-${mode}`).className='slot-status';document.getElementById(`slot-status-${mode}`).textContent='Not loaded';document.getElementById(`slot-clear-${mode}`).style.display='none';document.getElementById(`slot-${mode}`).classList.remove('loaded');checkMergeReady();}
+function checkMergeReady(){const loaded=Object.values(slotData).filter(x=>x!==null).length;document.getElementById('merge-btn').disabled=loaded<2;document.getElementById('merge-btn').textContent=loaded<2?`Generate gap analysis (need at least 2 sessions)`:`Generate gap analysis (${loaded} sessions loaded)`;}
+
+function scoreForObj(data,oid){
+  if(!data)return null;
+  for(const area of data.areas)for(const cat of area.categories)for(const obj of cat.objectives)if(obj.id===oid)return obj.score||null;
+  return null;
+}
+
+function runMerge(){
+  const loaded={};
+  ['self','partner','manager'].forEach(m=>{if(slotData[m])loaded[m]=slotData[m];});
+  const modes=Object.keys(loaded);
+  if(modes.length<2){alert('Load at least 2 sessions first.');return;}
+
+  const subjectName=loaded[modes[0]].subject||'Individual';
+  const period=loaded[modes[0]].period||'';
+
+  // overall scores
+  const overalls={};modes.forEach(m=>{overalls[m]=loaded[m].overall_score||0;});
+  const ovVals=Object.values(overalls).filter(x=>x>0);
+  const ovMean=ovVals.reduce((a,b)=>a+b,0)/ovVals.length;
+
+  // gap calculations
+  const gaps=[];
+  if(overalls.self&&overalls.manager)gaps.push({label:'Self vs. Manager',val:Math.abs(overalls.self-overalls.manager),type:'sm'});
+  if(overalls.self&&overalls.partner)gaps.push({label:'Self vs. Partner',val:Math.abs(overalls.self-overalls.partner),type:'sp'});
+  if(overalls.partner&&overalls.manager)gaps.push({label:'Partner vs. Manager',val:Math.abs(overalls.partner-overalls.manager),type:'pm'});
+  const maxGap=gaps.length?Math.max(...gaps.map(g=>g.val)):0;
+
+  // build output HTML
+  const raterLegend=modes.map(m=>`<div class="rl-item"><div class="rl-dot" style="background:${RATER_COLORS[m]}"></div>${RATER_LABELS[m]}${loaded[m]?` — ${loaded[m].rater}`:''}</div>`).join('');
+
+  const summaryCards=`<div class="gap-summary-grid">
+    ${modes.map(m=>`<div class="gap-mc"><div class="gap-mc-lbl">${RATER_LABELS[m]} score</div><div class="gap-mc-val" style="color:${overalls[m]?SC.solid[bi(overalls[m])]:'var(--text3)'}">${overalls[m]?overalls[m].toFixed(2):'—'}</div><div class="gap-mc-sub">${overalls[m]?getBand(overalls[m])?.label||'':''}</div></div>`).join('')}
+    <div class="gap-mc"><div class="gap-mc-lbl">Max gap</div><div class="gap-mc-val" style="color:${maxGap>1.5?SC.solid[1]:maxGap>0.8?SC.solid[2]:SC.solid[5]}">${maxGap?maxGap.toFixed(2):'—'}</div><div class="gap-mc-sub">${maxGap>1.5?'Significant divergence':maxGap>0.8?'Notable gap':'Good alignment'}</div></div>
+  </div>`;
+
+  const gapCards=AREAS.map(area=>{
+    const areaScores={};modes.forEach(m=>{const ad=loaded[m].areas.find(a=>a.area_id===area.id);if(ad)areaScores[m]=ad.area_avg;});
+    const aVals=Object.values(areaScores).filter(x=>x>0);
+    const aMax=aVals.length>1?Math.max(...aVals)-Math.min(...aVals):0;
+    const chipHtml=modes.map(m=>areaScores[m]?`<span class="gap-score-chip" style="background:${SC.bg[bi(areaScores[m])]};color:${SC.txt[bi(areaScores[m])]};border-color:${SC.bdr[bi(areaScores[m])]}">${RATER_LABELS[m][0]}: ${areaScores[m].toFixed(1)}</span>`:'').join('');
+
+    const objRows=area.cats.flatMap(cat=>cat.objs).map(obj=>{
+      const objScores={};modes.forEach(m=>{const s=scoreForObj(loaded[m],obj.id);if(s)objScores[m]=s;});
+      const oVals=Object.values(objScores).filter(x=>x>0);
+      if(oVals.length<1)return'';
+      const oMax=oVals.length>1?Math.max(...oVals)-Math.min(...oVals):0;
+      const flag=oMax>=2?`<span class="gap-flag gap-flag-alert">⚠ Gap: ${oMax.toFixed(1)}</span>`:oMax>=1?`<span class="gap-flag gap-flag-warn">△ Gap: ${oMax.toFixed(1)}</span>`:'';
+      const bars=modes.filter(m=>objScores[m]).map(m=>`<div class="gap-bar-row"><span class="gap-bar-lbl" style="color:${RATER_COLORS[m]}">${RATER_LABELS[m][0]}</span><div class="gap-bar-track"><div class="gap-bar-fill" style="width:${objScores[m]/5*100}%;background:${RATER_COLORS[m]}"></div></div><span class="gap-bar-val" style="color:${RATER_COLORS[m]}">${objScores[m]}</span></div>`).join('');
+      return`<div class="gap-obj-row"><div><div class="gap-obj-label">${obj.lbl}</div><div class="gap-obj-sub">${obj.sub}</div>${flag}</div><div class="gap-bars">${bars}</div></div>`;
+    }).join('');
+
+    const narrativeCols=modes.map(m=>{const ad=loaded[m].areas.find(a=>a.area_id===area.id);const n=ad?.narrative;if(!n)return'';return`<div class="narrative-col"><div class="narrative-col-hdr" style="color:${RATER_COLORS[m]}">${RATER_LABELS[m]} — ${loaded[m].rater}</div><div class="narrative-col-text">${n}</div></div>`;}).filter(x=>x).join('');
+    const narrativeSection=narrativeCols?`<div class="narrative-compare"><div class="narrative-compare-label">Rater narratives</div><div class="narrative-cols">${narrativeCols}</div></div>`:'';
+
+    return`<div class="gap-area-card"><div class="gap-area-hdr"><div class="gap-area-title">${area.icon} ${area.name}</div><div class="gap-area-scores">${chipHtml}</div></div><div class="gap-area-body">${objRows}${narrativeSection}</div></div>`;
+  }).join('');
+
+  // dev plan (top 3 gaps)
+  const allGapObjs=[];
+  AREAS.forEach(area=>area.cats.forEach(cat=>cat.objs.forEach(obj=>{
+    const objScores={};modes.forEach(m=>{const s=scoreForObj(loaded[m],obj.id);if(s)objScores[m]=s;});
+    const oVals=Object.values(objScores).filter(x=>x>0);
+    if(oVals.length<1)return;
+    const avg=oVals.reduce((a,b)=>a+b,0)/oVals.length;
+    const gap=oVals.length>1?Math.max(...oVals)-Math.min(...oVals):0;
+    allGapObjs.push({id:obj.id,lbl:obj.lbl,area:area.name,avg,gap,scores:objScores});
+  })));
+  // surface lowest avg first, then largest gap
+  const topDev=allGapObjs.filter(o=>o.avg>0).sort((a,b)=>a.avg-b.avg||b.gap-a.gap).slice(0,3);
+  const devHtml=topDev.map((o,i)=>`<div class="devplan-item" id="dp-${i}">
+    <div class="devplan-item-hdr"><div class="devplan-item-lbl">${i+1}. ${o.lbl} <span style="font-size:11px;color:var(--text3)">(${o.area})</span></div></div>
+    <div class="devplan-inputs">
+      <div><label>Target score</label><input type="number" min="1" max="5" placeholder="e.g. 4" id="dp-target-${i}"></div>
+      <div><label>Timeline</label><input type="text" placeholder="e.g. 90 days" id="dp-timeline-${i}"></div>
+      <div style="grid-column:1/-1"><label>Development actions</label><textarea placeholder="Specific actions, training, practice opportunities..." id="dp-actions-${i}"></textarea></div>
+    </div>
+  </div>`).join('');
+
+  document.getElementById('gap-output').className='visible';
+  document.getElementById('gap-output').innerHTML=`
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:14px">Gap Analysis — ${subjectName}${period?' | '+period:''}</h3>
+    <div class="rater-legend">${raterLegend}</div>
+    ${summaryCards}
+    ${gapCards}
+    <div class="devplan-section">
+      <h3>Development focus areas</h3>
+      <p>Auto-surfaced from lowest average scores and largest rater gaps. Manager adds targets and actions.</p>
+      ${devHtml}
+      <button class="add-focus-btn" onclick="addFocusItem()">+ Add additional focus area</button>
+    </div>`;
+  renderExec(loaded,subjectName,period,overalls,topDev);
+}
+
+let extraFocusCount=0;
+function addFocusItem(){
+  const idx=3+extraFocusCount++;
+  const div=document.createElement('div');div.className='devplan-item';
+  div.innerHTML=`<div class="devplan-inputs">
+    <div style="grid-column:1/-1"><label>Focus area</label><input type="text" placeholder="Objective name..." id="dp-lbl-${idx}"></div>
+    <div><label>Target score</label><input type="number" min="1" max="5" placeholder="e.g. 4" id="dp-target-${idx}"></div>
+    <div><label>Timeline</label><input type="text" placeholder="e.g. 90 days" id="dp-timeline-${idx}"></div>
+    <div style="grid-column:1/-1"><label>Development actions</label><textarea placeholder="Specific actions..." id="dp-actions-${idx}"></textarea></div>
+  </div>`;
+  document.querySelector('.add-focus-btn').before(div);
+}
+
+// ── EXEC VIEW ──
+function renderExec(loaded,subjectName,period,overalls,topDev){
+  if(!loaded)return;
+  const modes=Object.keys(loaded);
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const scorecardHtml=modes.map(m=>{const o=overalls[m];const b=bi(o);return`<div class="exec-score-box" style="background:${o?SC.bg[b]:'var(--surface2)'};border-color:${o?SC.bdr[b]:'var(--border)'}"><div class="exec-score-big" style="color:${o?SC.solid[b]:'var(--text3)'}">${o?o.toFixed(2):'—'}</div><div class="exec-score-lbl" style="color:${o?SC.txt[b]:'var(--text3)'}">${o?getBand(o)?.label||'':'Not scored'}</div><div class="exec-score-who">${RATER_LABELS[m]} — ${loaded[m].rater}</div></div>`;}).join('');
+
+  const tableRows=AREAS.flatMap(area=>area.cats.flatMap(cat=>cat.objs.map(obj=>{
+    const cells=modes.map(m=>{const s=scoreForObj(loaded[m],obj.id);return s?`<span class="chip" style="background:${SC.solid[s]};color:${s===3?'#3a3000':'#fff'}">${s}</span>`:`<span class="chip" style="background:var(--surface2);color:var(--text3)">—</span>`;}).join('');
+    const oScores=modes.map(m=>scoreForObj(loaded[m],obj.id)).filter(x=>x);
+    const gap=oScores.length>1?Math.max(...oScores)-Math.min(...oScores):0;
+    const gapChip=gap>=2?`<span style="font-size:10px;background:#FCEBEB;color:#791F1F;padding:1px 5px;border-radius:3px">⚠ ${gap.toFixed(1)}</span>`:gap>=1?`<span style="font-size:10px;background:#FFF0E0;color:#7A3B00;padding:1px 5px;border-radius:3px">${gap.toFixed(1)}</span>`:'';
+    return`<tr><td>${area.name}</td><td>${obj.lbl}</td>${modes.map(m=>`<td style="text-align:center">${scoreForObj(loaded[m],obj.id)?`<span class="chip" style="background:${SC.solid[scoreForObj(loaded[m],obj.id)]};color:${scoreForObj(loaded[m],obj.id)===3?'#3a3000':'#fff'}">${scoreForObj(loaded[m],obj.id)}</span>`:`<span class="chip" style="background:var(--surface2);color:var(--text3)">—</span>`}</td>`).join('')}<td>${gapChip}</td></tr>`;
+  }))).join('');
+
+  document.getElementById('exec-content').innerHTML=`
+    <div class="exec-hdr"><h1>L3 Individual Assessment — Review Packet</h1><h2>${subjectName}${period?' | '+period:''}</h2>
+    <div class="exec-meta"><span><strong>Date:</strong> ${now}</span>${modes.map(m=>`<span><strong>${RATER_LABELS[m]}:</strong> ${loaded[m].rater}</span>`).join('')}</div></div>
+    <div class="exec-scorecard">${scorecardHtml}</div>
+    <div class="exec-gap-section"><h2>Score comparison by objective</h2>
+    <table class="etbl"><thead><tr><th>Area</th><th>Objective</th>${modes.map(m=>`<th style="text-align:center;color:${RATER_COLORS[m]}">${RATER_LABELS[m]}</th>`).join('')}<th>Gap</th></tr></thead><tbody>${tableRows}</tbody></table></div>`;
+}
+
+// ── TABS ──
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id==='tab-'+t));
+}
+document.getElementById('tabs').addEventListener('click',e=>{const tab=e.target.closest('.tab');if(!tab)return;switchTab(tab.dataset.tab);});
+
+// start on mode screen
+selectMode('self');
+</script>
+</body>
+</html>
